@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-import { Bot, GrammyError, HttpError, InputFile } from "grammy";
+import { Bot, GrammyError, HttpError, InputFile, InlineKeyboard } from "grammy";
 
 interface Command {
     command: string;
@@ -10,6 +10,7 @@ interface Command {
 interface Membership {
     type: string;
     price: number;
+    description: string;
 }
 
 const bot = new Bot(process.env.BOT_TOKEN as string);
@@ -21,9 +22,9 @@ const commands: Command[] = [
 ];
 
 const memberships: Membership[] = [
-    { type: "Základní", price: 3000 },
-    { type: "All In One", price: 4000 },
-    { type: "Revolutio", price: 27000 }
+    { type: "Základní", price: 3000, description: "Základní členství" },
+    { type: "All In One", price: 4000, description: "All In One členství" },
+    { type: "Revolutio", price: 27000, description: "Revolutio členství" }
 ];
 
 const getCommandsList = (): string => {
@@ -31,7 +32,16 @@ const getCommandsList = (): string => {
 }
 
 bot.command('start', async (ctx) => {
-    await ctx.reply(`Zdravím, jsem bot, který vám pomůže s členstvím v našem klubu. \n Showtip.cz`);
+    const buttons = memberships.map(membership => [{
+        text: `${membership.type}: ${membership.price} Kč`,
+        callback_data: `invoice:${membership.type}`
+    }]);
+    await ctx.reply('<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10; Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje',
+        {
+            parse_mode: "HTML", reply_markup: {
+                inline_keyboard: buttons
+            }
+        },);
 });
 
 bot.command("help", (ctx) => ctx.reply(`Tady máte seznam příkazů:\n${getCommandsList()}`));
@@ -62,7 +72,7 @@ bot.on('callback_query', async (ctx) => {
     if (!selectedMembership) return;
 
     const title = selectedMembership.type;
-    const description = "Description of the membership";
+    const description = selectedMembership.description;
     const currency = "CZK";
     const prices = [{ label: selectedMembership.type, amount: selectedMembership.price * 100 }];
 
