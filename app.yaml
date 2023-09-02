@@ -1,0 +1,8 @@
+runtime: nodejs18
+resources:
+  cpu: 2
+  memory_gb: 2.3
+  disk_size_gb: 10
+env_variables:
+  BOT_TOKEN: "6653591748:AAFING6zOvpXgfpdUsMhr8bGPQuvdU8_sFw"
+  TELEGRAM_PAYMENT_PROVIDER_TOKEN: "284685063:TEST:MjhkNGU2MjgwNzg0"
