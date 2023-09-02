@@ -1,13 +1,6 @@
 require('dotenv').config();
 
 import { Bot, GrammyError, HttpError, InputFile } from "grammy";
-import fs from 'fs';
-
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-interface ENV {
-    BOT_TOKEN: string | undefined;
-}
 
 interface Command {
     command: string;
@@ -44,39 +37,36 @@ bot.command('start', async (ctx) => {
 bot.command("help", (ctx) => ctx.reply(`Tady máte seznam příkazů:\n${getCommandsList()}`));
 
 bot.command('clenstvi', async (ctx) => {
-    const buttons = await Promise.all(memberships.map(async membership => {
+    const buttons = memberships.map(membership => [{
+        text: `${membership.type}: ${membership.price} Kč`,
+        callback_data: `invoice:${membership.type}`
+    }]);
 
-        const sessionConfig = {
-            metadata: {
-                telegram_user_id: ctx.from?.id,
-            },
-            payment_method_types: ['card'],
-            line_items: [{
-                price_data: {
-                    currency: 'czk',
-                    product_data: {
-                        name: membership.type,
-                    },
-                    unit_amount: membership.price * 100,
-                },
-                quantity: 1,
-            }],
-            mode: 'payment',
-            success_url: 'http://localhost:3000/success',
-            cancel_url: 'http://localhost:3000/cancel',
-        };
+    await ctx.replyWithPhoto(new InputFile("./images/membership.jpg"), {
+        caption: "Vyberte si členství:",
+        reply_markup: { inline_keyboard: buttons }
+    });
+});
 
-        const session = await stripe.checkout.sessions.create(sessionConfig);
+bot.on('callback_query', async (ctx) => {
+    const chatId = ctx.chat!.id;
+    const data = ctx.callbackQuery.data;
+    const providerToken = process.env.TELEGRAM_PAYMENT_PROVIDER_TOKEN ?? "";
 
-        return [{
-            text: `${membership.type}: ${membership.price} Kč`,
-            url: session.url
-        }];
-    }));
+    if (!data!.startsWith('invoice:')) return;
 
-    const keyboard = { inline_keyboard: buttons };
+    const selectedType = data!.split(':')[1];
 
-    await ctx.replyWithPhoto(new InputFile("./images/membership.jpg"), { reply_markup: keyboard, caption: "Vyberte si členství:" });
+    const selectedMembership = memberships.find(m => m.type === selectedType);
+
+    if (!selectedMembership) return;
+
+    const title = selectedMembership.type;
+    const description = "Description of the membership";
+    const currency = "CZK";
+    const prices = [{ label: selectedMembership.type, amount: selectedMembership.price * 100 }];
+
+    await ctx.api.sendInvoice(chatId, title, description, selectedMembership.type, providerToken, currency, prices);
 });
 
 bot.api.setMyCommands(commands);
@@ -94,12 +84,6 @@ bot.catch((err) => {
     }
     ctx.reply("Omlouváme se, ale nastal error :(");
 });
-
-bot.on("message", (ctx) => {
-    console.log(ctx.message);
-});
-
-bot.on("message", (ctx) => ctx.reply("Got another message!"));
 
 bot.start();
 
