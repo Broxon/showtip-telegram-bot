@@ -40,6 +40,7 @@ const getCommandsList = (): string => {
 bot.command('start', async (ctx) => {
     await ctx.reply(`Zdravím, jsem bot, který vám pomůže s členstvím v našem klubu. Napište /help pro seznam příkazů.`);
 });
+
 bot.command("help", (ctx) => ctx.reply(`Tady máte seznam příkazů:\n${getCommandsList()}`));
 
 bot.command('clenstvi', async (ctx) => {
