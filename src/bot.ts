@@ -32,8 +32,13 @@ const getCommandsList = (): string => {
 }
 
 bot.command('start', async (ctx) => {
-    const buttons = memberships.map(membership => [{
-        text: `${membership.type}: ${membership.price} Kč`,
+    const names = [
+        "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
+        "All IN ONE 🏆, 4000 CZK/MĚSÍC",
+        "REVOLUTIO 👑, 27000 CZK/MĚSÍC"
+    ]
+    const buttons = memberships.map((membership, index) => [{
+        text: names[index],
         callback_data: `invoice:${membership.type}`
     }]);
     await ctx.reply('<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10; Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje',
