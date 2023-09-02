@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@types/uuid':
+    specifier: ^9.0.3
+    version: 9.0.3
   dotenv:
     specifier: ^16.3.1
     version: 16.3.1
@@ -17,6 +20,9 @@ dependencies:
   stripe:
     specifier: ^13.4.0
     version: 13.4.0
+  uuid:
+    specifier: ^9.0.0
+    version: 9.0.0
 
 devDependencies:
   '@types/node':
@@ -549,6 +555,10 @@ packages:
       '@types/http-errors': 2.0.1
       '@types/mime': 3.0.1
       '@types/node': 20.5.7
+    dev: false
+
+  /@types/uuid@9.0.3:
+    resolution: {integrity: sha512-taHQQH/3ZyI3zP8M/puluDEIEvtQHVYcC6y3N8ijFtAd28+Ey/G4sg1u2gB01S8MwybLOKAp9/yCMu/uR5l3Ug==}
     dev: false
 
   /abbrev@1.1.1:
