@@ -31,22 +31,28 @@ const getCommandsList = (): string => {
     return commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n');
 }
 
+const getDefaultKeyboard = (): InlineKeyboard => {
+    return new InlineKeyboard()
+        .text("💳 Kreditní/Debitní karta", "credit_card")
+        .row()
+        .text("🔑 Přístupový kód ", "access_code")
+        .row()
+        .text("« Zpět", "back_to_membership")
+        .row();
+}
+
 bot.command('start', async (ctx) => {
     const names = [
         "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
         "All IN ONE 🏆, 4000 CZK/MĚSÍC",
         "REVOLUTIO 👑, 27000 CZK/MĚSÍC"
     ]
-    const buttons = memberships.map((membership, index) => [{
-        text: names[index],
-        callback_data: `invoice:${membership.type}`
-    }]);
-    await ctx.reply('<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10; Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje',
+    await ctx.reply(
+        `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;`,
         {
-            parse_mode: "HTML", reply_markup: {
-                inline_keyboard: buttons
-            }
-        },);
+            parse_mode: "HTML",
+            reply_markup: getDefaultKeyboard()
+        });
 });
 
 bot.command("help", (ctx) => ctx.reply(`Tady máte seznam příkazů:\n${getCommandsList()}`));
@@ -64,8 +70,28 @@ bot.command('clenstvi', async (ctx) => {
 });
 
 bot.on('callback_query', async (ctx) => {
-    const chatId = ctx.chat!.id;
     const data = ctx.callbackQuery.data;
+
+    if (data === "credit_card") {
+        const names = [
+            "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
+            "All IN ONE 🏆, 4000 CZK/MĚSÍC",
+            "REVOLUTIO 👑, 27000 CZK/MĚSÍC"
+        ]
+        const buttons = memberships.map((membership, index) => [{
+            text: names[index],
+            callback_data: `invoice:${membership.type}`
+        }]);
+
+        await ctx.editMessageReplyMarkup({
+            reply_markup: {
+                inline_keyboard: buttons
+            }
+        });
+        return;
+    }
+
+    const chatId = ctx.chat!.id;
     const providerToken = process.env.TELEGRAM_PAYMENT_PROVIDER_TOKEN ?? "";
 
     if (!data!.startsWith('invoice:')) return;
