@@ -1,15 +1,14 @@
 {
     "compilerOptions": {
-        "target": "ESNext",                          
-        "module": "commonjs",                    
-        "lib": ["es6"],                     
-        "allowJs": true,
-        "outDir": "build",                          
-        "rootDir": "src",
-        "strict": true,         
-        "noImplicitAny": true,
+        "target": "ESNEXT",
+        "module": "ESNext", // changed from commonjs to esnext
+        "lib": ["ES2021"],
+        "outDir": "./dist/",
+        "strict": true,
+        "moduleResolution": "node",
         "esModuleInterop": true,
-        "resolveJsonModule": true
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
       },
       "include": [
       "src/**/*.*"

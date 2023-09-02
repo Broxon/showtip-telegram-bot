@@ -45,10 +45,7 @@ bot.command('clenstvi', (ctx) => {
     ctx.reply(getMembershipsList());
 });
 
-await bot.api.setMyCommands([
-    { command: "start", description: "Start the bot" },
-    { command: "help", description: "Show help text" },
-    { command: "settings", description: "Open settings" },
-]);
+bot.on("message", (ctx) => ctx.reply("Got another message!"));
+
 
 bot.start();
