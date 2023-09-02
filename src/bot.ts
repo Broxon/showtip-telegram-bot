@@ -40,7 +40,7 @@ const getCommandsList = (): string => {
 const staticMessage = `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10;`;
 
 const bundles = new InlineKeyboard()
-    .text("Jednotný tiket 🔥, 3000 CZK/TIKET", "signle_ticket")
+    .text("JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET", "signle_ticket")
     .row()
     .text("All IN ONE 🏆, 4000 CZK/MĚSÍC", "all_in_one")
     .row()
