@@ -38,30 +38,7 @@ const getCommandsList = (): string => {
 }
 
 bot.command('start', async (ctx) => {
-    const inputText = ctx.message?.text || "";
-    if (inputText.startsWith('/start success_')) {
-        const sessionId = inputText.split('success_')[1];
-        try {
-            const session = await stripe.checkout.sessions.retrieve(sessionId);
-            if (session.payment_status === 'paid') {
-                const userId = session.metadata.telegram_user_id;
-                fs.appendFileSync('paid_users.txt', `${userId}\n`);
-                await ctx.reply('Děkujeme za vaši platbu!');
-            } else {
-                await ctx.reply('Platba neproběhla v pořádku');
-            }
-        } catch (error) {
-            console.error('Error retrieving session:', error);
-            await ctx.reply('Omlouváme se, ale nastal error :(');
-        }
-    } else if (inputText.startsWith('/start cancel_')) {
-        const sessionId = inputText.split('cancel_')[1];
-        console.log(sessionId);
-        await ctx.reply('Platba byla zrušena.');
-
-    } else {
-        await ctx.reply(`Zdravím, jsem bot, který vám pomůže s členstvím v našem klubu. Napište /help pro seznam příkazů.`);
-    }
+    await ctx.reply(`Zdravím, jsem bot, který vám pomůže s členstvím v našem klubu. Napište /help pro seznam příkazů.`);
 });
 bot.command("help", (ctx) => ctx.reply(`Tady máte seznam příkazů:\n${getCommandsList()}`));
 
@@ -99,10 +76,6 @@ bot.command('clenstvi', async (ctx) => {
     const keyboard = { inline_keyboard: buttons };
 
     await ctx.replyWithPhoto(new InputFile("./images/membership.jpg"), { reply_markup: keyboard, caption: "Vyberte si členství:" });
-});
-
-bot.on('callback_query', async (query) => {
-    const membership = memberships.find(mem => mem.type === query.update.callback_query.data);
 });
 
 bot.api.setMyCommands(commands);
