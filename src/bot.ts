@@ -101,6 +101,7 @@ bot.command('clenstvi', async (ctx) => {
     await ctx.replyWithPhoto(new InputFile("./images/membership.jpg"), { reply_markup: keyboard, caption: "Vyberte si členství:" });
 });
 
+<<<<<<< HEAD
 
 bot.on('callback_query', async (query) => {
     const membership = memberships.find(mem => mem.type === query.update.callback_query.data);
@@ -125,6 +126,10 @@ bot.catch((err) => {
 bot.on("message", (ctx) => {
     console.log(ctx.message);
 });
+=======
+bot.on("message", (ctx) => ctx.reply("Got another message!"));
+
+>>>>>>> 9aca1dc3a0b5e77f427a4d8b920a3504aff1b6cf
 
 bot.start();
 
