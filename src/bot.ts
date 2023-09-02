@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-import { Bot, GrammyError, HttpError, InputFile } from "grammy";
+import { Bot, GrammyError, HttpError, InputFile, InlineKeyboard } from "grammy";
 import fs from 'fs';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -37,9 +37,49 @@ const getCommandsList = (): string => {
     return commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n');
 }
 
+const staticMessage = `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10;`;
+
+const bundles = new InlineKeyboard()
+    .text("Jednotný tiket 🔥, 3000 CZK/TIKET", "signle_ticket")
+    .row()
+    .text("All IN ONE 🏆, 4000 CZK/MĚSÍC", "all_in_one")
+    .row()
+    .text("REVOLUTIO 👑, 27000 CZK/MĚSÍC", "revolutio")
+    .row()
+
+const paymentKeyboard = new InlineKeyboard()
+    .text("💳 Kreditní/Debitní karta", "credit_card")
+    .row()
+    .text("🔑 Přístupový kód ", "access_code")
+    .row()
+    .text("« Zpět", "back_to_membership")
+    .row();
+
 bot.command('start', async (ctx) => {
-    await ctx.reply(`Zdravím, jsem bot, který vám pomůže s členstvím v našem klubu. \n Showtip.cz`);
+    await ctx.reply('<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10; Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje',
+        { parse_mode: "HTML", disable_web_page_preview: true, reply_markup: bundles },);
 });
+
+bot.on('callback_query', async (ctx) => {
+    const callbackData = ctx.callbackQuery.data;
+
+    let dynamicMessage; // Tato část zprávy se mění dynamicky na základě callbacku
+
+    switch (callbackData) {
+        case "signle_ticket":
+        case "all_in_one":
+        case "revolutio":
+            dynamicMessage = "Vyberte si platební metodu:";
+            await ctx.editMessageText(staticMessage + dynamicMessage, { parse_mode: "HTML", disable_web_page_preview: true, reply_markup: paymentKeyboard });
+            break;
+        case "back_to_membership":
+            dynamicMessage = "Vyberte si jeden z následujících balíčků. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje";
+            await ctx.editMessageText(staticMessage + dynamicMessage, { parse_mode: "HTML", disable_web_page_preview: true, reply_markup: bundles });
+            break;
+        // Můžete přidat další případy pro další callbacky zde
+    }
+});
+
 
 bot.command("help", (ctx) => ctx.reply(`Tady máte seznam příkazů:\n${getCommandsList()}`));
 
