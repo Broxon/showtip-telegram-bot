@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-import { Bot, GrammyError, HttpError, InputFile, InlineKeyboard } from "grammy";
+import { Bot, Context, SessionFlavor, GrammyError, HttpError, InputFile, InlineKeyboard, session } from "grammy";
 
 interface Command {
     command: string;
@@ -13,7 +13,19 @@ interface Membership {
     description: string;
 }
 
-const bot = new Bot(process.env.BOT_TOKEN as string);
+interface SessionData {
+    selectedMembershipType: string;
+}
+
+type MyContext = Context & SessionFlavor<SessionData>;
+
+const bot = new Bot<MyContext>(process.env.BOT_TOKEN as string);
+function initial(): SessionData {
+    return {
+        selectedMembershipType: ""
+    };
+}
+bot.use(session({ initial }));
 
 const commands: Command[] = [
     { command: "start", description: "Spustí bota" },
@@ -31,7 +43,23 @@ const getCommandsList = (): string => {
     return commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n');
 }
 
-const getDefaultKeyboard = (): InlineKeyboard => {
+const names = [
+    "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
+    "All IN ONE 🏆, 4000 CZK/MĚSÍC",
+    "REVOLUTIO 👑, 27000 CZK/MĚSÍC"
+];
+
+const getMembershipNamesKeyboard = (): InlineKeyboard => {
+    return new InlineKeyboard()
+        .text(names[0], `membership:${memberships[0].type}`)
+        .row()
+        .text(names[1], `membership:${memberships[1].type}`)
+        .row()
+        .text(names[2], `membership:${memberships[2].type}`)
+        .row();
+};
+
+const getPaymentOptionsKeyboard = (): InlineKeyboard => {
     return new InlineKeyboard()
         .text("💳 Kreditní/Debitní karta", "credit_card")
         .row()
@@ -39,19 +67,14 @@ const getDefaultKeyboard = (): InlineKeyboard => {
         .row()
         .text("« Zpět", "back_to_membership")
         .row();
-}
+};
 
 bot.command('start', async (ctx) => {
-    const names = [
-        "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
-        "All IN ONE 🏆, 4000 CZK/MĚSÍC",
-        "REVOLUTIO 👑, 27000 CZK/MĚSÍC"
-    ]
     await ctx.reply(
         `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;`,
         {
             parse_mode: "HTML",
-            reply_markup: getDefaultKeyboard()
+            reply_markup: getMembershipNamesKeyboard()
         });
 });
 
@@ -71,43 +94,37 @@ bot.command('clenstvi', async (ctx) => {
 
 bot.on('callback_query', async (ctx) => {
     const data = ctx.callbackQuery.data;
-
-    if (data === "credit_card") {
-        const names = [
-            "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
-            "All IN ONE 🏆, 4000 CZK/MĚSÍC",
-            "REVOLUTIO 👑, 27000 CZK/MĚSÍC"
-        ]
-        const buttons = memberships.map((membership, index) => [{
-            text: names[index],
-            callback_data: `invoice:${membership.type}`
-        }]);
-
+    if (data!.startsWith('membership:')) {
+        const selectedType = data!.split(':')[1];
+        ctx.session.selectedMembershipType = selectedType;
         await ctx.editMessageReplyMarkup({
-            reply_markup: {
-                inline_keyboard: buttons
-            }
+            reply_markup: getPaymentOptionsKeyboard()
         });
         return;
     }
 
-    const chatId = ctx.chat!.id;
-    const providerToken = process.env.TELEGRAM_PAYMENT_PROVIDER_TOKEN ?? "";
+    if (data === "credit_card") {
+        const selectedType = ctx.session.selectedMembershipType;
+        const selectedMembership = memberships.find(m => m.type === selectedType);
+        if (!selectedMembership) return;
 
-    if (!data!.startsWith('invoice:')) return;
+        const chatId = ctx.chat!.id;
+        const providerToken = process.env.TELEGRAM_PAYMENT_PROVIDER_TOKEN ?? "";
+        const title = selectedMembership.type;
+        const description = selectedMembership.description;
+        const currency = "CZK";
+        const prices = [{ label: selectedMembership.type, amount: selectedMembership.price * 100 }];
 
-    const selectedType = data!.split(':')[1];
+        await ctx.api.sendInvoice(chatId, title, description, selectedMembership.type, providerToken, currency, prices);
+        return;
+    }
 
-    const selectedMembership = memberships.find(m => m.type === selectedType);
-
-    if (!selectedMembership) return;
-
-    const title = selectedMembership.type;
-    const description = selectedMembership.description;
-    const currency = "CZK";
-    const prices = [{ label: selectedMembership.type, amount: selectedMembership.price * 100 }];
-
-    await ctx.api.sendInvoice(chatId, title, description, selectedMembership.type, providerToken, currency, prices);
+    if (data === "back_to_membership") {
+        await ctx.editMessageReplyMarkup({
+            reply_markup: getMembershipNamesKeyboard()
+        });
+        return;
+    }
 });
 
 bot.api.setMyCommands(commands);
