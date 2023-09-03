@@ -153,7 +153,10 @@ bot.on('pre_checkout_query', (query) => {
 })
 
 bot.on('successful_payment', async (msg) => {
-    const groupChatId = '-1001829724709';
+    let groupChatId = '-1001829724709';
+    if (msg.successful_payment?.invoice_payload === 'All In One') {
+        groupChatId = '-1001929255559'
+    }
     const inviteLink = await bot.exportChatInviteLink(groupChatId);
     bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za minutu`);
 
