@@ -60,11 +60,14 @@ const paymentNames = [
 
 bot.setMyCommands(commands)
 
+const dfMessage = `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10;`
+
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const buttons = memberships.map((name, index) => [{ text: names[index], callback_data: `membership:${name.type}` }])
-    bot.sendMessage(chatId, `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro členství v klubu. &#10;&#10; Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b> 🤑 &#10;&#10;<b> ****************************** </b> &#10;&#10; <a href="showtip.cz"> <b> Showtip.cz </b> </a> &#10;&#10; <b> ****************************** </b> &#10;&#10;`, {
+    bot.sendMessage(chatId, dfMessage, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
         reply_markup: { inline_keyboard: buttons }
     });
 });
@@ -109,7 +112,9 @@ bot.on('callback_query', async (query) => {
         const selectedType = data!.split(':')[1];
         userStates[message!.chat.id] = { type: selectedType };
         const paymentButtons = paymentNames.map(payment => [{ text: payment.name, callback_data: payment.type }]);
-        bot.editMessageReplyMarkup({ inline_keyboard: paymentButtons }, { chat_id: message!.chat.id, message_id: message!.message_id });
+        bot.editMessageText(`${dfMessage} Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje`, {
+            chat_id: message!.chat.id, message_id: message!.message_id, reply_markup: { inline_keyboard: paymentButtons }, parse_mode: "HTML", disable_web_page_preview: true,
+        });
         return;
     }
 
@@ -135,7 +140,10 @@ bot.on('callback_query', async (query) => {
 
     if (data === 'back_to_membership') {
         const buttons = memberships.map((name, index) => [{ text: names[index], callback_data: `membership:${name.type}` }])
-        bot.editMessageReplyMarkup({ inline_keyboard: buttons }, { chat_id: message!.chat.id, message_id: message!.message_id });
+        bot.editMessageText(dfMessage, {
+            chat_id: message!.chat.id, message_id: message!.message_id, reply_markup: { inline_keyboard: buttons }, parse_mode: "HTML",
+            disable_web_page_preview: true,
+        });
         return;
     }
 });
