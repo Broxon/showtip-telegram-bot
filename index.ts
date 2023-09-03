@@ -33,6 +33,7 @@ const commands: Command[] = [
     { command: "start", description: "Spustí bota" },
     { command: "help", description: "Vypíše příkazy" },
     { command: "clenstvi", description: "Vypíše druhy členství" },
+    { command: "stav", description: "Vypíše stav členství" }
 ];
 
 const memberships = [
@@ -75,7 +76,7 @@ bot.onText(/\/start/, (msg) => {
 
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Tady máte seznam příkazů:\n${commands.map(cmd => `${cmd.command} - ${cmd.description}`).join('\n')}`);
+    bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}`);
 });
 
 bot.onText(/\/clenstvi/, (msg) => {
@@ -85,6 +86,25 @@ bot.onText(/\/clenstvi/, (msg) => {
         caption: "Vyberte si členství:",
         reply_markup: { inline_keyboard: buttons }
     });
+});
+
+bot.onText(/\/stav/, async (msg) => {
+    const chatId = msg.chat.id;
+    const docRef = admin.firestore().collection('payments').doc(`${chatId}`);
+    let user = await docRef.get();
+    if (!user.exists) {
+        bot.sendMessage(chatId, `Nemáte zakoupené členství`);
+        return;
+    }
+
+    const expiryDate = user.data()!.expiryDate.toDate();
+    const now = new Date();
+    if (expiryDate < now) {
+        bot.sendMessage(chatId, `Vaše členství vypršelo`);
+        return;
+    }
+
+    bot.sendMessage(chatId, `Máte zaplacené ${user.data()!.paymentId}. Vaše členství vyprší ${expiryDate.toLocaleDateString()}`);
 });
 
 bot.on('callback_query', async (query) => {
@@ -132,7 +152,7 @@ bot.on('pre_checkout_query', (query) => {
 bot.on('successful_payment', async (msg) => {
     const groupChatId = '-1001829724709';
     const inviteLink = await bot.exportChatInviteLink(groupChatId);
-    bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}`);
+    bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za minutu`);
 
     const docRef = admin.firestore().collection('payments').doc(`${msg.chat.id}`);
     let user = await docRef.get();
@@ -147,15 +167,30 @@ bot.on('successful_payment', async (msg) => {
     }
     currentExpiry.setMonth(currentExpiry.getMonth() + 1);
 
+    let existingPaymentIds = [];
+    if (user.data() && Array.isArray(user.data()!.paymentId)) {
+        existingPaymentIds = user.data()!.paymentId;
+    }
+
+    const newPaymentId = msg.successful_payment?.invoice_payload;
+    if (newPaymentId) {
+        existingPaymentIds.push(newPaymentId);
+    }
+
     await docRef.set({
         userId: msg.chat.id,
         userName: msg.chat.first_name + " " + msg.chat.last_name,
         name: msg.chat.username,
         timestamp: new Date(),
-        paymentId: msg.successful_payment?.invoice_payload,
+        paymentId: existingPaymentIds,
         amount: msg.successful_payment?.total_amount,
         expiryDate: currentExpiry
     }, { merge: true });
+
+    setTimeout(async () => {
+        await bot.exportChatInviteLink(groupChatId);
+    }, 60000);
+
 });
 
 console.log('Bot is running...')
