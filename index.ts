@@ -2,7 +2,6 @@ require('dotenv').config();
 // @ts-ignore
 process.env["NTBA_FIX_350"] = 1;
 
-import express from 'express';
 import TelegramBot from 'node-telegram-bot-api';
 import * as admin from "firebase-admin";
 
@@ -10,10 +9,6 @@ const serviceAccount = require("./key-petal-397812-firebase-adminsdk-t4ys8-4e1d0
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
-
-const port = process.env.PORT || 3000;
-
-const app = express();
 
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN || '', { polling: true });
 
