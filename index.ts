@@ -81,7 +81,7 @@ bot.onText(/\/help/, (msg) => {
     bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}`);
 });
 
-bot.onText(/\/clenstvi (.+)/, async (msg, match) => {
+bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
     try {
         let notKeyFound = true;
         const id: any = (match ?? [])[1];
