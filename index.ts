@@ -79,6 +79,7 @@ bot.onText(/\/help/, (msg) => {
 });
 
 bot.onText(/\/clenstvi (.+)/, async (msg, match) => {
+    let notKeyFound = true;
     const id: any = (match ?? [])[1];
     if (!id) {
         const chatId = msg.chat.id;
@@ -94,6 +95,8 @@ bot.onText(/\/clenstvi (.+)/, async (msg, match) => {
                 if (doc.exists) {
                     const data = doc.data()!.keys;
                     if (data.includes(id)) {
+                        notKeyFound = false;
+
                         const chatId = msg.chat.id;
                         const docRef = admin.firestore().collection('payments').doc(`${msg.chat.id}`);
                         let user = await docRef.get();
@@ -116,11 +119,14 @@ bot.onText(/\/clenstvi (.+)/, async (msg, match) => {
                             expiryDate: currentExpiry
                         }, { merge: true });
                         bot.sendMessage(chatId, `Máte zaplacené ${memberships[i - 1].type}. Vaše členství vyprší ${currentExpiry.toLocaleDateString()}`);
+                        return;
                     }
                 }
             });
         }
-        return bot.sendMessage(msg.chat.id, "Klíč je neplatný!");
+    }
+    if (!notKeyFound) {
+        bot.sendMessage(msg.chat.id, "Klíč je neplatný!");
     }
 });
 
