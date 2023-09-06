@@ -123,6 +123,15 @@ bot.onText(/\/clenstvi (.+)/, async (msg, match) => {
                                 expiryDate: currentExpiry
                             }, { merge: true });
                             bot.sendMessage(chatId, `Máte zaplacené ${memberships[i - 1].type}. Vaše členství vyprší ${currentExpiry.toLocaleDateString()}`);
+                            let groupChatId = '-1001829724709';
+                            if (memberships[i - 1].type === 'All In One') {
+                                groupChatId = '-1001929255559'
+                            }
+                            const inviteLink = await bot.exportChatInviteLink(groupChatId);
+                            bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);     
+                            setTimeout(async () => {
+                                await bot.exportChatInviteLink(groupChatId);
+                            }, 60000);               
                             return;
                         }
                     }
