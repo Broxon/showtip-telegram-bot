@@ -252,7 +252,7 @@ bot.on('callback_query', async (query) => {
 
         if (data === 'back_to_membership') {
             const buttons = memberships.map((name, index) => [{ text: names[index], callback_data: `membership:${name.type}` }])
-            bot.editMessageText(dfMessage, {
+            bot.editMessageText(`${dfMessage}Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje`, {
                 chat_id: message!.chat.id, message_id: message!.message_id, reply_markup: { inline_keyboard: buttons }, parse_mode: "HTML",
                 disable_web_page_preview: true,
             });
