@@ -220,7 +220,7 @@ bot.on('callback_query', async (query) => {
             const selectedType = data!.split(':')[1];
             userStates[message!.chat.id] = { type: selectedType };
             const paymentButtons = paymentNames.map(payment => [{ text: payment.name, callback_data: payment.type }]);
-            bot.editMessageText(`${dfMessage} Vyberte si z následujících balíčků:`, {
+            bot.editMessageText(`${dfMessage}Vyberte si z následujících balíčků:`, {
                 chat_id: message!.chat.id, message_id: message!.message_id, reply_markup: { inline_keyboard: paymentButtons }, parse_mode: "HTML", disable_web_page_preview: true,
             });
             return;
