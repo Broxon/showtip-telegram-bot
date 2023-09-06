@@ -128,10 +128,10 @@ bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
                                 groupChatId = '-1001929255559'
                             }
                             const inviteLink = await bot.exportChatInviteLink(groupChatId);
-                            bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);     
+                            bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);
                             setTimeout(async () => {
                                 await bot.exportChatInviteLink(groupChatId);
-                            }, 60000);               
+                            }, 60000);
                             return;
                         }
                     }
@@ -241,7 +241,7 @@ bot.on('callback_query', async (query) => {
             const description = payment.description;
             const currency = "CZK";
             const prices = [{ label: payment.type, amount: payment.price * 100 }];
-            await bot.sendInvoice(chatId, title, description, payment.type, providerToken, currency, prices, { photo_url: "https://cdn-icons-png.flaticon.com/512/7152/7152394.png", need_name: true });
+            await bot.sendInvoice(chatId, title, description, payment.type, providerToken, currency, prices, { photo_url: "https://cdn-icons-png.flaticon.com/512/7152/7152394.png", need_name: true, need_email: true, need_phone_number: true });
 
             return;
         }
