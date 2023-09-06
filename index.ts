@@ -4,6 +4,7 @@ process.env["NTBA_FIX_350"] = 1;
 
 import TelegramBot from 'node-telegram-bot-api';
 import * as admin from "firebase-admin";
+import { v4 as uuidv4 } from 'uuid';
 
 const serviceAccount = require("./key-petal-397812-firebase-adminsdk-t4ys8-4e1d0c7433.json");
 admin.initializeApp({
@@ -65,7 +66,7 @@ const dfMessage = `<b>Vítejte!</b>&#10;&#10; Jsem váš osobní asistent pro č
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const buttons = memberships.map((name, index) => [{ text: names[index], callback_data: `membership:${name.type}` }])
-    bot.sendMessage(chatId, dfMessage, {
+    bot.sendMessage(chatId, `${dfMessage}Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje`, {
         parse_mode: "HTML",
         disable_web_page_preview: true,
         reply_markup: { inline_keyboard: buttons }
@@ -77,13 +78,50 @@ bot.onText(/\/help/, (msg) => {
     bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}`);
 });
 
-bot.onText(/\/clenstvi/, (msg) => {
-    const chatId = msg.chat.id;
-    const buttons = memberships.map(membership => [{ text: `${membership.type}: ${membership.price} Kč`, callback_data: `invoice:${membership.type}` }]);
-    bot.sendPhoto(chatId, "./images/membership.jpg", {
-        caption: "Vyberte si členství:",
-        reply_markup: { inline_keyboard: buttons }
-    });
+bot.onText(/\/clenstvi (.+)/, async (msg, match) => {
+    const id: any = (match ?? [])[1];
+    if (!id) {
+        const chatId = msg.chat.id;
+        const buttons = memberships.map((membership, index) => [{ text: names[index], callback_data: `invoice:${membership.type}` }]);
+        bot.sendPhoto(chatId, "./images/membership.jpg", {
+            caption: "Vyberte si členství:",
+            reply_markup: { inline_keyboard: buttons }
+        });
+    } else {
+        for (let i = 1; i <= 3; i++) {
+            const doc = admin.firestore().collection('keys').doc(`${i}`);
+            doc.get().then(async (doc) => {
+                if (doc.exists) {
+                    const data = doc.data()!.keys;
+                    if (data.includes(id)) {
+                        const chatId = msg.chat.id;
+                        const docRef = admin.firestore().collection('payments').doc(`${msg.chat.id}`);
+                        let user = await docRef.get();
+
+                        let currentExpiry = new Date();
+                        if (user.exists && user.data()!.expiryDate) {
+                            currentExpiry = new Date(user.data()!.expiryDate.toDate());
+                        }
+
+                        if (currentExpiry < new Date()) {
+                            currentExpiry = new Date();
+                        }
+                        currentExpiry.setMonth(currentExpiry.getMonth() + 1);
+
+                        await docRef.set({
+                            userId: msg.chat.id,
+                            userName: msg.chat.first_name + " " + msg.chat.last_name,
+                            name: msg.chat.username,
+                            timestamp: new Date(),
+                            expiryDate: currentExpiry
+                        }, { merge: true });
+                        bot.sendMessage(chatId, `Máte zaplacené ${memberships[i - 1].type}. Vaše členství vyprší ${currentExpiry.toLocaleDateString()}`);
+                    }
+                }
+            });
+        }
+        return bot.sendMessage(msg.chat.id, "Klíč je neplatný!");
+    }
 });
 
 bot.onText(/\/stav/, async (msg) => {
@@ -105,6 +143,42 @@ bot.onText(/\/stav/, async (msg) => {
     bot.sendMessage(chatId, `Máte zaplacené ${user.data()!.paymentId}. Vaše členství vyprší ${expiryDate.toLocaleDateString()}`);
 });
 
+bot.onText(/\/keygen (.+)/, async (msg, match) => {
+    if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "Aurelicos") return;
+
+    const text = (match ?? [])[1];
+    if (!text) {
+        bot.sendMessage(msg.chat.id, "Musíte zadat číslo členství");
+        return;
+    }
+
+    const chatId = parseInt(text);
+    if (isNaN(chatId)) {
+        bot.sendMessage(msg.chat.id, "Musíte zadat číslo členství");
+        return;
+    }
+
+    const uuid = uuidv4();
+    const docRef = admin.firestore().collection('keys').doc(`${chatId}`);
+    const data = await docRef.get();
+
+    if (data.exists && data.data()!.keys) {
+        const keys = data.data()!.keys;
+        keys.push(uuid);
+
+        await docRef.set({
+            keys: keys
+        }, { merge: true });
+
+    } else {
+        await docRef.set({
+            keys: [uuid]
+        }, { merge: true });
+    }
+
+    bot.sendMessage(msg.chat.id, `Klíč byl úspěšně vygenerován: ${uuid}`);
+});
+
 bot.on('callback_query', async (query) => {
     const message = query.message;
     const data = query.data;
@@ -112,7 +186,7 @@ bot.on('callback_query', async (query) => {
         const selectedType = data!.split(':')[1];
         userStates[message!.chat.id] = { type: selectedType };
         const paymentButtons = paymentNames.map(payment => [{ text: payment.name, callback_data: payment.type }]);
-        bot.editMessageText(`${dfMessage} Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje`, {
+        bot.editMessageText(dfMessage, {
             chat_id: message!.chat.id, message_id: message!.message_id, reply_markup: { inline_keyboard: paymentButtons }, parse_mode: "HTML", disable_web_page_preview: true,
         });
         return;
@@ -133,9 +207,13 @@ bot.on('callback_query', async (query) => {
         const description = payment.description;
         const currency = "CZK";
         const prices = [{ label: payment.type, amount: payment.price * 100 }];
-        await bot.sendInvoice(chatId, title, description, payment.type, providerToken, currency, prices, { photo_url: "https://s3.getstickerpack.com/storage/uploads/sticker-pack/genshin-chat-stickers-v10/sticker_2.png?2aed706a22a8a4988640e3aa22311f9e&d=200x200", need_name: true });
+        await bot.sendInvoice(chatId, title, description, payment.type, providerToken, currency, prices, { photo_url: "https://cdn-icons-png.flaticon.com/512/7152/7152394.png", need_name: true });
 
         return;
+    }
+
+    if (data === 'access_code') {
+        bot.sendMessage(message!.chat.id, "Zadejte kód, pomocí příkazu členství ve tvaru: /clenstvi <kód>");
     }
 
     if (data === 'back_to_membership') {
