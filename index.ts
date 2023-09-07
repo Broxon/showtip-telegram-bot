@@ -81,7 +81,7 @@ bot.onText(/\/help/, (msg) => {
     bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte na tel. číslo +420604274317 nebo Štěpán Pavelec na Telegramu`);
 });
 
-bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
+bot.onText(/\/clenstvi (.+)?/, async (msg, match) => {
     try {
         let notKeyFound = true;
         const id: any = (match ?? [])[1];
@@ -115,13 +115,28 @@ bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
                             }
                             currentExpiry.setMonth(currentExpiry.getMonth() + 1);
 
-                            await docRef.set({
-                                userId: msg.chat.id,
-                                userName: msg.chat.first_name + " " + msg.chat.last_name,
-                                name: msg.chat.username,
-                                timestamp: new Date(),
-                                expiryDate: currentExpiry
-                            }, { merge: true });
+                            if (i === 2) {
+                                await docRef.set({
+                                    userId: msg.chat.id,
+                                    userName: msg.chat.first_name + " " + msg.chat.last_name,
+                                    name: msg.chat.username,
+                                    timestamp: new Date(),
+                                    expiryDate: currentExpiry,
+                                    paymentId: "All In One",
+                                }, { merge: true });
+                            } else {
+                                let numberOfTickets: number = i === 1 ? 1 : 10;
+                                if (user.exists && user.data()!.numberOfTickets) {
+                                    numberOfTickets += Number(user.data()!.numberOfTickets);
+                                }
+                                await docRef.set({
+                                    userId: msg.chat.id,
+                                    userName: msg.chat.first_name + " " + msg.chat.last_name,
+                                    name: msg.chat.username,
+                                    numberOfTickets: numberOfTickets,
+                                    timestamp: new Date(),
+                                }, { merge: true });
+                            }
                             bot.sendMessage(chatId, `Máte zaplacené ${memberships[i - 1].type}. Vaše členství vyprší ${currentExpiry.toLocaleDateString()}`);
                             let groupChatId = '-1001829724709';
                             if (memberships[i - 1].type === 'All In One') {
@@ -157,14 +172,20 @@ bot.onText(/\/stav/, async (msg) => {
             return;
         }
 
-        const expiryDate = user.data()!.expiryDate.toDate();
-        const now = new Date();
-        if (expiryDate < now) {
-            bot.sendMessage(chatId, `Vaše členství vypršelo`);
-            return;
+        const tickets = user.data()!.numberOfTickets;
+        if (tickets && user.data()!.expiryDate) {
+            const expiryDate = user.data()!.expiryDate.toDate();
+            const now = new Date();
+            return bot.sendMessage(chatId, `Máte zakoupené toto členství: ${user.data()!.paymentId}, ${expiryDate < now ? "Vaše členství již vypršelo!" : `které vyprší ${expiryDate.toLocaleDateString()}`}\nMáte zakoupený tento počet tiketů: ${tickets}`);
+        } else if (tickets) {
+            return bot.sendMessage(chatId, `Máte zakoupený tento počet tiketů: ${tickets}`);
+        } else if (user.data()!.expiryDate) {
+            const expiryDate = user.data()!.expiryDate.toDate();
+            const now = new Date();
+            return bot.sendMessage(chatId, `Máte zakoupené toto členství: ${user.data()!.paymentId}, ${expiryDate < now ? "Vaše členství již vypršelo!" : `které vyprší ${expiryDate.toLocaleDateString()}`}`);
         }
 
-        bot.sendMessage(chatId, `Máte zaplacené ${user.data()!.paymentId}. Vaše členství vyprší ${expiryDate.toLocaleDateString()}`);
+        bot.sendMessage(chatId, `Něco se pokazilo, zkuste to prosím znovu`);
     } catch (e) {
         console.log(e);
         bot.sendMessage(msg.chat.id, "Něco se pokazilo, zkuste to prosím znovu");
@@ -290,25 +311,33 @@ bot.on('successful_payment', async (msg) => {
         }
         currentExpiry.setMonth(currentExpiry.getMonth() + 1);
 
-        let existingPaymentIds = [];
-        if (user.data() && Array.isArray(user.data()!.paymentId)) {
-            existingPaymentIds = user.data()!.paymentId;
-        }
-
         const newPaymentId = msg.successful_payment?.invoice_payload;
-        if (newPaymentId) {
-            existingPaymentIds.push(newPaymentId);
+        if (newPaymentId === "All In One") {
+            await docRef.set({
+                userId: msg.chat.id,
+                userName: msg.chat.first_name + " " + msg.chat.last_name,
+                name: msg.chat.username,
+                timestamp: new Date(),
+                paymentId: newPaymentId,
+                amount: msg.successful_payment?.total_amount,
+                expiryDate: currentExpiry
+            }, { merge: true });
+        } else {
+            let numberOfTickets = 1;
+            if (newPaymentId === "Revolutio") {
+                numberOfTickets = 10;
+            }
+            if (user.data()!.numberOfTickets) {
+                numberOfTickets += Number(user.data()!.numberOfTickets);
+            }
+            await docRef.set({
+                userId: msg.chat.id,
+                userName: msg.chat.first_name + " " + msg.chat.last_name,
+                name: msg.chat.username,
+                timestamp: new Date(),
+                numberOfTickets: numberOfTickets,
+            }, { merge: true });
         }
-
-        await docRef.set({
-            userId: msg.chat.id,
-            userName: msg.chat.first_name + " " + msg.chat.last_name,
-            name: msg.chat.username,
-            timestamp: new Date(),
-            paymentId: existingPaymentIds,
-            amount: msg.successful_payment?.total_amount,
-            expiryDate: currentExpiry
-        }, { merge: true });
 
         setTimeout(async () => {
             await bot.exportChatInviteLink(groupChatId);
