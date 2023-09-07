@@ -81,86 +81,101 @@ bot.onText(/\/help/, (msg) => {
     bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte na tel. číslo +420604274317 nebo Štěpán Pavelec na Telegramu`);
 });
 
-bot.onText(/\/clenstvi (.+)?/, async (msg, match) => {
+bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
     try {
-        let notKeyFound = true;
-        const id: any = (match ?? [])[1];
+        const id: any = (match ?? "")[1].trim();
+        const chatId = msg.chat.id;
+
         if (!id) {
-            const chatId = msg.chat.id;
-            const buttons = memberships.map((membership, index) => [{ text: names[index], callback_data: `invoice:${membership.type}` }]);
+            const buttons = memberships.map((membership, index) => [{
+                text: names[index],
+                callback_data: `invoice:${membership.type}`
+            }]);
             bot.sendPhoto(chatId, "./images/membership.jpg", {
                 caption: "Vyberte si členství:",
                 reply_markup: { inline_keyboard: buttons }
             });
-        } else {
-            for (let i = 1; i <= 3; i++) {
-                const doc = admin.firestore().collection('keys').doc(`${i}`);
-                doc.get().then(async (doc) => {
-                    if (doc.exists) {
-                        const data = doc.data()!.keys;
-                        if (data.includes(id)) {
-                            notKeyFound = false;
+            return;
+        }
 
-                            const chatId = msg.chat.id;
-                            const docRef = admin.firestore().collection('payments').doc(`${msg.chat.id}`);
-                            let user = await docRef.get();
+        let keyWasFound = false;
 
-                            let currentExpiry = new Date();
-                            if (user.exists && user.data()!.expiryDate) {
-                                currentExpiry = new Date(user.data()!.expiryDate.toDate());
-                            }
+        for (let i = 1; i <= 3 && !keyWasFound; i++) {
+            const doc = await admin.firestore().collection('keys').doc(`${i}`).get();
 
-                            if (currentExpiry < new Date()) {
-                                currentExpiry = new Date();
-                            }
-                            currentExpiry.setMonth(currentExpiry.getMonth() + 1);
+            if (doc.exists) {
+                const data = doc.data()!.keys;
 
-                            if (i === 2) {
-                                await docRef.set({
-                                    userId: msg.chat.id,
-                                    userName: msg.chat.first_name + " " + msg.chat.last_name,
-                                    name: msg.chat.username,
-                                    timestamp: new Date(),
-                                    expiryDate: currentExpiry,
-                                    paymentId: "All In One",
-                                }, { merge: true });
-                            } else {
-                                let numberOfTickets: number = i === 1 ? 1 : 10;
-                                if (user.exists && user.data()!.numberOfTickets) {
-                                    numberOfTickets += Number(user.data()!.numberOfTickets);
-                                }
-                                await docRef.set({
-                                    userId: msg.chat.id,
-                                    userName: msg.chat.first_name + " " + msg.chat.last_name,
-                                    name: msg.chat.username,
-                                    numberOfTickets: numberOfTickets,
-                                    timestamp: new Date(),
-                                }, { merge: true });
-                            }
-                            bot.sendMessage(chatId, `Máte zaplacené ${memberships[i - 1].type}. Vaše členství vyprší ${currentExpiry.toLocaleDateString()}`);
-                            let groupChatId = '-1001829724709';
-                            if (memberships[i - 1].type === 'All In One') {
-                                groupChatId = '-1001929255559'
-                            }
-                            const inviteLink = await bot.exportChatInviteLink(groupChatId);
-                            bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);
-                            setTimeout(async () => {
-                                await bot.exportChatInviteLink(groupChatId);
-                            }, 60000);
-                            return;
-                        }
+                if (data.includes(id)) {
+                    keyWasFound = true;
+
+                    const index = data.indexOf(id);
+                    if (index > -1) {
+                        data.splice(index, 1);
                     }
-                });
+                    await doc.ref.update({ keys: data });
+
+                    const docRef = admin.firestore().collection('payments').doc(`${msg.chat.id}`);
+                    const user = await docRef.get();
+
+                    let currentExpiry = new Date();
+                    if (user.exists && user.data()!.expiryDate) {
+                        currentExpiry = new Date(user.data()!.expiryDate.toDate());
+                    }
+
+                    if (currentExpiry < new Date()) {
+                        currentExpiry = new Date();
+                    }
+                    currentExpiry.setMonth(currentExpiry.getMonth() + 1);
+
+                    if (i === 2) {
+                        await docRef.set({
+                            userId: msg.chat.id,
+                            userName: msg.chat.first_name + " " + msg.chat.last_name,
+                            name: msg.chat.username,
+                            timestamp: new Date(),
+                            expiryDate: currentExpiry,
+                            paymentId: "All In One",
+                        }, { merge: true });
+                    } else {
+                        let numberOfTickets: number = i === 1 ? 1 : 10;
+                        if (user.exists && user.data()!.numberOfTickets) {
+                            numberOfTickets += Number(user.data()!.numberOfTickets);
+                        }
+                        await docRef.set({
+                            userId: msg.chat.id,
+                            userName: msg.chat.first_name + " " + msg.chat.last_name,
+                            name: msg.chat.username,
+                            numberOfTickets: numberOfTickets,
+                            timestamp: new Date(),
+                        }, { merge: true });
+                    }
+
+                    bot.sendMessage(chatId, `Máte zaplacené ${memberships[i - 1].type}. Vaše členství vyprší ${currentExpiry.toLocaleDateString()}`);
+                    let groupChatId = '-1001829724709';
+                    if (memberships[i - 1].type === 'All In One') {
+                        groupChatId = '-1001929255559'
+                    }
+                    const inviteLink = await bot.exportChatInviteLink(groupChatId);
+                    bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);
+
+                    setTimeout(async () => {
+                        await bot.exportChatInviteLink(groupChatId);
+                    }, 600000);
+                }
             }
         }
-        if (!notKeyFound) {
+
+        if (!keyWasFound) {
             bot.sendMessage(msg.chat.id, "Klíč je neplatný!");
         }
+
     } catch (e) {
         console.log(e);
         bot.sendMessage(msg.chat.id, "Něco se pokazilo, zkuste to prosím znovu");
     }
 });
+
 
 bot.onText(/\/stav/, async (msg) => {
     try {
