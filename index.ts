@@ -83,10 +83,10 @@ bot.onText(/\/help/, (msg) => {
 
 bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
     try {
-        const id: any = (match ?? "")[1].trim();
+        const idString: any = (match ?? [])[1];
         const chatId = msg.chat.id;
 
-        if (!id) {
+        if (!idString) {
             const buttons = memberships.map((membership, index) => [{
                 text: names[index],
                 callback_data: `invoice:${membership.type}`
@@ -99,6 +99,8 @@ bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
         }
 
         let keyWasFound = false;
+
+        const id = idString.trim();
 
         for (let i = 1; i <= 3 && !keyWasFound; i++) {
             const doc = await admin.firestore().collection('keys').doc(`${i}`).get();
@@ -138,6 +140,15 @@ bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
                             paymentId: "All In One",
                         }, { merge: true });
                     } else {
+                        const collections = admin.firestore().collection("payments");
+                        const snapshot = await collections.get();
+                        let users = 0;
+                        snapshot.forEach(async () => {
+                            users++;
+                        });
+                        if (users > 20) {
+                            return bot.sendMessage(chatId, "Již nelze kupovat tikety, pro více informací mě kontaktujte: číslo +420604274317 nebo Štěpán Pavelec na Telegramu");
+                        }
                         let numberOfTickets: number = i === 1 ? 1 : 10;
                         if (user.exists && user.data()!.numberOfTickets) {
                             numberOfTickets += Number(user.data()!.numberOfTickets);
@@ -271,6 +282,18 @@ bot.on('callback_query', async (query) => {
             const payment = memberships.find(membership => membership.type === userState.type);
             if (!payment) return;
 
+            if (payment === memberships[0] || payment === memberships[2]) {
+                const collections = admin.firestore().collection("payments");
+                const snapshot = await collections.get();
+                let users = 0;
+                snapshot.forEach(async () => {
+                    users++;
+                });
+                if (users > 20) {
+                    return bot.sendMessage(message!.chat.id, "Již nelze kupovat tikety, pro více informací mě kontaktujte: číslo +420604274317 nebo Štěpán Pavelec na Telegramu");
+                }
+
+            }
             const chatId = message!.chat.id;
             const providerToken = process.env.PAYMENT_TOKEN ?? "";
             const title = payment.type;
