@@ -95,7 +95,7 @@ async function addCouponToDatabase(couponCode: string, validityDate: Date, disco
 
 bot.onText(/\/addcoupon (\S+) (\d{4}-\d{2}-\d{2}) (\d+) (\d+)/, async (msg, match) => {
     // Only allow certain users (e.g., admins) to add coupons
-    if (msg.chat.username !== "Broxoncz") return;
+    if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "prosteg") return;
 
     if (!match) {
         return bot.sendMessage(msg.chat.id, "Invalid coupon details. Please try again.");
@@ -256,7 +256,7 @@ bot.onText(/\/stav/, async (msg) => {
 
 bot.onText(/\/keygen (.+)/, async (msg, match) => {
     try {
-        if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "Aurelicos") return;
+        if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "Aurelicos" && msg.chat.username !== "prosteg") return;
 
         const text = (match ?? [])[1];
         if (!text) {
