@@ -76,6 +76,42 @@ bot.onText(/\/start/, (msg) => {
     }
 });
 
+async function addCouponToDatabase(couponCode: string, validityDate: Date, discountAmount: number, usageLimit: number) {
+    try {
+        const couponRef = admin.firestore().collection('discount_coupons').doc(couponCode);
+
+        await couponRef.set({
+            validity: admin.firestore.Timestamp.fromDate(validityDate),
+            discount_amount: discountAmount,
+            usage_limit: usageLimit,
+            used_count: 0
+        });
+
+        console.log(`Coupon with code ${couponCode} added successfully!`);
+    } catch (error) {
+        console.error("Error adding coupon to the database:", error);
+    }
+}
+
+bot.onText(/\/addcoupon (\S+) (\d{4}-\d{2}-\d{2}) (\d+) (\d+)/, async (msg, match) => {
+    // Only allow certain users (e.g., admins) to add coupons
+    if (msg.chat.username !== "Broxoncz") return;
+
+    if (!match) {
+        return bot.sendMessage(msg.chat.id, "Invalid coupon details. Please try again.");
+    }
+
+
+    const couponCode = match[1];
+    const validityDate = new Date(match[2]);
+    const discountAmount = parseInt(match[3]);
+    const usageLimit = parseInt(match[4]);
+
+    await addCouponToDatabase(couponCode, validityDate, discountAmount, usageLimit);
+
+    bot.sendMessage(msg.chat.id, `Coupon with code ${couponCode} added successfully!`);
+});
+
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte na tel. číslo +420604274317 nebo Štěpán Pavelec na Telegramu`);
@@ -265,7 +301,10 @@ bot.on('callback_query', async (query) => {
         const data = query.data;
         if (data!.startsWith('membership:')) {
             const selectedType = data!.split(':')[1];
-            userStates[message!.chat.id] = { type: selectedType };
+            if (!userStates[message!.chat.id]) {
+                userStates[message!.chat.id] = {};
+            }
+            userStates[message!.chat.id].type = selectedType;
             const paymentButtons = paymentNames.map(payment => [{ text: payment.name, callback_data: payment.type }]);
             bot.editMessageText(`${dfMessage}Vyberte si jednu z následujících možností:`, {
                 chat_id: message!.chat.id, message_id: message!.message_id, reply_markup: { inline_keyboard: paymentButtons }, parse_mode: "HTML", disable_web_page_preview: true,
@@ -276,7 +315,10 @@ bot.on('callback_query', async (query) => {
         if (data === 'credit_card' || data?.startsWith("invoice")) {
             if (data?.startsWith("invoice")) {
                 const selectedType = data!.split(':')[1];
-                userStates[message!.chat.id] = { type: selectedType };
+                if (!userStates[message!.chat.id]) {
+                    userStates[message!.chat.id] = {};
+                }
+                userStates[message!.chat.id].type = selectedType;
             }
             const userState = userStates[message!.chat.id];
             const payment = memberships.find(membership => membership.type === userState.type);
@@ -295,20 +337,25 @@ bot.on('callback_query', async (query) => {
 
             }
 
-            let discountAmount = 0;
+            let discountAmount = 1;
+
+            console.log(userStates);
+
             if (userStates[message!.chat.id].coupon) {
                 const couponRef = admin.firestore().collection('discount_coupons').doc(userStates[message!.chat.id].coupon);
                 const couponData = await couponRef.get();
 
+                console.log(couponData);
+
                 // Fetch the current date and compare with coupon's validity
                 const now = new Date();
-                const couponValidity = couponData.data().validity.toDate();
+                const couponValidity = couponData?.data()?.validity.toDate();
 
-                if (couponValidity >= now && couponData.data().used_count < couponData.data().usage_limit) {
+                if (couponValidity >= now && couponData?.data()?.used_count < couponData?.data()?.usage_limit) {
                     // Update the used_count of the coupon
                     couponRef.update({ used_count: admin.firestore.FieldValue.increment(1) });
 
-                    discountAmount = (100 - couponData.data().discount_amount) / 100; // Convert to the smallest currency unit, e.g., cents
+                    discountAmount = (100 - couponData?.data()?.discount_amount) / 100; // Convert to the smallest currency unit, e.g., cents
 
                     // Clear the coupon from userStates after usage
                     delete userStates[message!.chat.id].coupon;
@@ -362,18 +409,23 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
     }
 
     const now = new Date();
-    const couponValidity = couponData.data().validity.toDate();
+    const couponValidity = couponData?.data()?.validity.toDate();
 
     if (couponValidity < now) {
         return bot.sendMessage(chatId, "The coupon has expired.");
     }
 
-    if (couponData.data().used_count >= couponData.data().usage_limit) {
+    if (couponData?.data()?.used_count >= couponData?.data()?.usage_limit) {
         return bot.sendMessage(chatId, "The coupon has reached its usage limit.");
     }
 
     // Store the valid coupon code against the user in userStates or another appropriate data structure
+    if (!userStates[msg.chat.id]) {
+        userStates[msg.chat.id] = {};
+    }
     userStates[msg.chat.id].coupon = couponCode;
+
+    console.log(userStates);
 
     return bot.sendMessage(chatId, "Coupon applied successfully! Your next payment will reflect the discount.");
 });
