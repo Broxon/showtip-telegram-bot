@@ -294,12 +294,38 @@ bot.on('callback_query', async (query) => {
                 }
 
             }
+
+            let discountAmount = 0;
+            if (userStates[message!.chat.id].coupon) {
+                const couponRef = admin.firestore().collection('discount_coupons').doc(userStates[message!.chat.id].coupon);
+                const couponData = await couponRef.get();
+
+                // Fetch the current date and compare with coupon's validity
+                const now = new Date();
+                const couponValidity = couponData.data().validity.toDate();
+
+                if (couponValidity >= now && couponData.data().used_count < couponData.data().usage_limit) {
+                    // Update the used_count of the coupon
+                    couponRef.update({ used_count: admin.firestore.FieldValue.increment(1) });
+
+                    discountAmount = (100 - couponData.data().discount_amount) / 100; // Convert to the smallest currency unit, e.g., cents
+
+                    // Clear the coupon from userStates after usage
+                    delete userStates[message!.chat.id].coupon;
+                } else {
+                    // Handle invalid coupon scenario, if necessary.
+                }
+            }
+
+
+
             const chatId = message!.chat.id;
             const providerToken = process.env.PAYMENT_TOKEN ?? "";
             const title = payment.type;
             const description = payment.description;
             const currency = "CZK";
-            const prices = [{ label: payment.type, amount: payment.price * 100 }];
+            const prices = [{ label: payment.type, amount: (payment.price * 100) * discountAmount }]; // Apply the discount here
+
             await bot.sendInvoice(chatId, title, description, payment.type, providerToken, currency, prices, { photo_url: "https://cdn-icons-png.flaticon.com/512/7152/7152394.png", need_name: true, need_email: true, need_phone_number: true });
 
             return;
@@ -321,6 +347,35 @@ bot.on('callback_query', async (query) => {
         console.log(e);
         bot.sendMessage(message!.chat.id, "Něco se pokazilo, zkuste to prosím znovu");
     }
+});
+
+bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const couponCode = (match ?? [])[1];
+
+    // Fetch the coupon from the database
+    const couponRef = admin.firestore().collection('discount_coupons').doc(couponCode);
+    const couponData = await couponRef.get();
+
+    if (!couponData.exists) {
+        return bot.sendMessage(chatId, "Invalid coupon code.");
+    }
+
+    const now = new Date();
+    const couponValidity = couponData.data().validity.toDate();
+
+    if (couponValidity < now) {
+        return bot.sendMessage(chatId, "The coupon has expired.");
+    }
+
+    if (couponData.data().used_count >= couponData.data().usage_limit) {
+        return bot.sendMessage(chatId, "The coupon has reached its usage limit.");
+    }
+
+    // Store the valid coupon code against the user in userStates or another appropriate data structure
+    userStates[msg.chat.id].coupon = couponCode;
+
+    return bot.sendMessage(chatId, "Coupon applied successfully! Your next payment will reflect the discount.");
 });
 
 bot.on('pre_checkout_query', (query) => {
