@@ -5,6 +5,7 @@ process.env["NTBA_FIX_350"] = 1;
 import TelegramBot from 'node-telegram-bot-api';
 import * as admin from "firebase-admin";
 import { v4 as uuidv4 } from 'uuid';
+import { commands, memberships, names, paymentNames } from './data';
 
 const serviceAccount = require("./key-petal-397812-firebase-adminsdk-t4ys8-4e1d0c7433.json");
 admin.initializeApp({
@@ -13,10 +14,8 @@ admin.initializeApp({
 
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN || '', { polling: true });
 
-interface Command {
-    command: string;
-    description: string;
-}
+const Stripe = require('stripe');
+const stripe = Stripe(process.env.STRIPE_TOKEN || "");
 
 let userStates: any = {};
 
@@ -24,39 +23,6 @@ bot.on("error", msg => console.log('[bot] error', msg))
 bot.on('polling_error', msg => console.log(`[bot] polling_error:`, msg))
 bot.on('webhook_error', msg => console.log(`[bot] webhook_error:`, msg))
 
-const commands: Command[] = [
-    { command: "start", description: "Spustí bota" },
-    { command: "help", description: "Vypíše příkazy" },
-    { command: "clenstvi", description: "Vypíše druhy členství" },
-    { command: "stav", description: "Vypíše stav členství" }
-];
-
-const memberships = [
-    { type: "Základní členství", price: 3000, description: "Základní balíček pro jeden tiket" },
-    { type: "All In One", price: 4000, description: "Členství na měsíc" },
-    { type: "Revolutio", price: 27000, description: "Revolutio členství na měsíc" }
-];
-
-const names = [
-    "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
-    "All IN ONE 🏆, 4000 CZK/MĚSÍC",
-    "REVOLUTIO 👑, 27000 CZK/10 TIKETŮ"
-];
-
-const paymentNames = [
-    {
-        name: "💳 Kreditní/Debitní karta",
-        type: "credit_card"
-    },
-    {
-        name: "🔑 Přístupový kód ",
-        type: "access_code"
-    },
-    {
-        name: "« Zpět",
-        type: "back_to_membership"
-    }
-]
 
 bot.setMyCommands(commands)
 
@@ -295,20 +261,20 @@ bot.on('callback_query', async (query) => {
 
             }
 
-            let discountAmount = 0;
+            let discountAmount = 1;
             if (userStates[message!.chat.id].coupon) {
                 const couponRef = admin.firestore().collection('discount_coupons').doc(userStates[message!.chat.id].coupon);
                 const couponData = await couponRef.get();
 
                 // Fetch the current date and compare with coupon's validity
                 const now = new Date();
-                const couponValidity = couponData.data().validity.toDate();
+                const couponValidity = couponData.data()!.validity.toDate();
 
-                if (couponValidity >= now && couponData.data().used_count < couponData.data().usage_limit) {
+                if (couponValidity >= now && couponData.data()!.used_count < couponData.data()!.usage_limit) {
                     // Update the used_count of the coupon
                     couponRef.update({ used_count: admin.firestore.FieldValue.increment(1) });
 
-                    discountAmount = (100 - couponData.data().discount_amount) / 100; // Convert to the smallest currency unit, e.g., cents
+                    discountAmount = (100 - couponData.data()!.discount_amount) / 100; // Convert to the smallest currency unit, e.g., cents
 
                     // Clear the coupon from userStates after usage
                     delete userStates[message!.chat.id].coupon;
@@ -317,16 +283,43 @@ bot.on('callback_query', async (query) => {
                 }
             }
 
-
-
             const chatId = message!.chat.id;
-            const providerToken = process.env.PAYMENT_TOKEN ?? "";
             const title = payment.type;
             const description = payment.description;
             const currency = "CZK";
-            const prices = [{ label: payment.type, amount: (payment.price * 100) * discountAmount }]; // Apply the discount here
+            const amount = (payment.price * 100) * discountAmount;
 
-            await bot.sendInvoice(chatId, title, description, payment.type, providerToken, currency, prices, { photo_url: "https://cdn-icons-png.flaticon.com/512/7152/7152394.png", need_name: true, need_email: true, need_phone_number: true });
+            try {
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ['card'],
+                    metadata: {
+                        telegramChatId: chatId,
+                        label: payment.type,
+                        userName: `${message!.chat.first_name} ${message!.chat.last_name}`,
+                        userId: chatId,
+                        amount: amount,
+                    },
+                    line_items: [{
+                        price_data: {
+                            currency: currency,
+                            product_data: {
+                                name: title,
+                                description: description,
+                            },
+                            unit_amount: amount,
+                        },
+                        quantity: 1,
+                    }],
+                    mode: 'payment',
+                    success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
+                });
+
+                const paymentUrl = session.url;
+                bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${paymentUrl})`, { parse_mode: "Markdown" });
+            } catch (e) {
+                console.log(e)
+                bot.sendMessage(chatId, "Nastal error při generování platebního linku, zkuste to prosím znovu");
+            }
 
             return;
         }
@@ -362,15 +355,21 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
     }
 
     const now = new Date();
-    const couponValidity = couponData.data().validity.toDate();
+    const couponValidity = couponData.data()!.validity.toDate();
 
     if (couponValidity < now) {
         return bot.sendMessage(chatId, "The coupon has expired.");
     }
 
-    if (couponData.data().used_count >= couponData.data().usage_limit) {
+    if (couponData.data()!.used_count >= couponData.data()!.usage_limit) {
         return bot.sendMessage(chatId, "The coupon has reached its usage limit.");
     }
+
+    if (!userStates[msg.chat.id]) {
+        userStates[msg.chat.id] = {};
+    }
+    userStates[msg.chat.id].coupon = couponCode;
+
 
     // Store the valid coupon code against the user in userStates or another appropriate data structure
     userStates[msg.chat.id].coupon = couponCode;
@@ -381,64 +380,5 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
 bot.on('pre_checkout_query', (query) => {
     bot.answerPreCheckoutQuery(query.id, true)
 })
-
-bot.on('successful_payment', async (msg) => {
-    try {
-        let groupChatId = '-1001829724709';
-        if (msg.successful_payment?.invoice_payload === 'All In One') {
-            groupChatId = '-1001929255559'
-        }
-        const inviteLink = await bot.exportChatInviteLink(groupChatId);
-        bot.sendMessage(msg.chat.id, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);
-
-        const docRef = admin.firestore().collection('payments').doc(`${msg.chat.id}`);
-        let user = await docRef.get();
-
-        let currentExpiry = new Date();
-        if (user.exists && user.data()!.expiryDate) {
-            currentExpiry = new Date(user.data()!.expiryDate.toDate());
-        }
-
-        if (currentExpiry < new Date()) {
-            currentExpiry = new Date();
-        }
-        currentExpiry.setMonth(currentExpiry.getMonth() + 1);
-
-        const newPaymentId = msg.successful_payment?.invoice_payload;
-        if (newPaymentId === "All In One") {
-            await docRef.set({
-                userId: msg.chat.id,
-                userName: msg.chat.first_name + " " + msg.chat.last_name,
-                name: msg.chat.username,
-                timestamp: new Date(),
-                paymentId: newPaymentId,
-                amount: msg.successful_payment?.total_amount,
-                expiryDate: currentExpiry
-            }, { merge: true });
-        } else {
-            let numberOfTickets = 1;
-            if (newPaymentId === "Revolutio") {
-                numberOfTickets = 10;
-            }
-            if (user.data()!.numberOfTickets) {
-                numberOfTickets += Number(user.data()!.numberOfTickets);
-            }
-            await docRef.set({
-                userId: msg.chat.id,
-                userName: msg.chat.first_name + " " + msg.chat.last_name,
-                name: msg.chat.username,
-                timestamp: new Date(),
-                numberOfTickets: numberOfTickets,
-            }, { merge: true });
-        }
-
-        setTimeout(async () => {
-            await bot.exportChatInviteLink(groupChatId);
-        }, 60000);
-    } catch (e) {
-        console.log(e);
-        bot.sendMessage(msg!.chat.id, "Něco se pokazilo, zkuste to prosím znovu");
-    }
-});
 
 console.log('Bot is running...')
