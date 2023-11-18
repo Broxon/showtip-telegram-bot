@@ -359,7 +359,7 @@ bot.on('callback_query', async (query) => {
                 });
 
                 const paymentUrl = session.url;
-                bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${paymentUrl})`, { parse_mode: "Markdown" });
+                bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${paymentUrl})\nPři zaplacení souhlasíte s našimi [podmínkami](https://www.showtip.cz/obchodni-podminky).`, { parse_mode: "Markdown" });
             } catch (e) {
                 console.log(e)
                 bot.sendMessage(chatId, "Nastal error při generování platebního linku, zkuste to prosím znovu");
