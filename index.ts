@@ -287,9 +287,9 @@ bot.on('callback_query', async (query) => {
                 userStates[message!.chat.id].type = selectedType;
             }
             const userState = userStates[message!.chat.id];
-            if (userState.type === "Revolutio") {
-                return bot.sendMessage(message!.chat.id, "Toto členství momentálně nelze zakoupit!");
-            }
+            // if (userState.type === "Revolutio") {
+            //     return bot.sendMessage(message!.chat.id, "Toto členství momentálně nelze zakoupit!");
+            // }
             const payment = memberships.find(membership => membership.type === userState.type);
             if (!payment) return;
 
