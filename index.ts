@@ -333,6 +333,7 @@ bot.on('callback_query', async (query) => {
             const chatId = message!.chat.id;
             const title = payment.type;
             const description = payment.description;
+            const price_id = payment.id;
             const currency = "CZK";
             const amount = (payment.price * 100) * discountAmount;
 
@@ -348,11 +349,7 @@ bot.on('callback_query', async (query) => {
                     },
                     line_items: [{
                         price_data: {
-                            currency: currency,
-                            product_data: {
-                                name: title,
-                                description: description,
-                            },
+                            price: price_id,
                             unit_amount: amount,
                         },
                         quantity: 1,
