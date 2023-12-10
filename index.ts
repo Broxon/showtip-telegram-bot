@@ -348,16 +348,12 @@ bot.on('callback_query', async (query) => {
                         amount: amount,
                     },
                     line_items: [{
-                        price_data: {
-                            price: price_id,
-                            unit_amount: amount,
-                        },
+                        price: `${price_id}`,
                         quantity: 1,
                     }],
-                    mode: 'payment',
+                    mode: `${payment.mode}`,
                     success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
                 });
-
                 const paymentUrl = session.url;
                 bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${paymentUrl})\nPři zaplacení souhlasíte s našimi [podmínkami](https://www.showtip.cz/obchodni-podminky).`, { parse_mode: "Markdown" });
             } catch (e) {
