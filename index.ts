@@ -80,7 +80,7 @@ bot.onText(/\/addcoupon (\S+) (\d{4}-\d{2}-\d{2}) (\d+) (\d+)/, async (msg, matc
 
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte na tel. číslo +420604274317 nebo Štěpán Pavelec na Telegramu`);
+    bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte podpora@showtip.cz nebo nás kontaktujte na Instagramu @showtip.cz`);
 });
 
 bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
@@ -307,11 +307,10 @@ bot.on('callback_query', async (query) => {
             }
 
             let discountAmount = 1;
+            let couponId = undefined;
             if (userStates[message!.chat.id].coupon) {
                 const couponRef = admin.firestore().collection('discount_coupons').doc(userStates[message!.chat.id].coupon);
                 const couponData = await couponRef.get();
-
-                console.log(couponData);
 
                 // Fetch the current date and compare with coupon's validity
                 const now = new Date();
@@ -325,8 +324,11 @@ bot.on('callback_query', async (query) => {
 
                     // Clear the coupon from userStates after usage
                     delete userStates[message!.chat.id].coupon;
+
+                    // Set the couponId to be used in the Stripe Checkout Session
+                    couponId = userStates[message!.chat.id].coupon;
                 } else {
-                    // Handle invalid coupon scenario, if necessary.
+                    console.log("Coupon is invalid");
                 }
             }
 
@@ -351,6 +353,7 @@ bot.on('callback_query', async (query) => {
                         price: `${price_id}`,
                         quantity: 1,
                     }],
+                    discounts: couponId ? [{ coupon: couponId }] : undefined, // apply coupon if it exists
                     mode: `${payment.mode}`,
                     success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
                 });
