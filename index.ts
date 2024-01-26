@@ -42,42 +42,6 @@ bot.onText(/\/start/, (msg) => {
     }
 });
 
-async function addCouponToDatabase(couponCode: string, validityDate: Date, discountAmount: number, usageLimit: number) {
-    try {
-        const couponRef = admin.firestore().collection('discount_coupons').doc(couponCode);
-
-        await couponRef.set({
-            validity: admin.firestore.Timestamp.fromDate(validityDate),
-            discount_amount: discountAmount,
-            usage_limit: usageLimit,
-            used_count: 0
-        });
-
-        console.log(`Coupon with code ${couponCode} added successfully!`);
-    } catch (error) {
-        console.error("Error adding coupon to the database:", error);
-    }
-}
-
-bot.onText(/\/addcoupon (\S+) (\d{4}-\d{2}-\d{2}) (\d+) (\d+)/, async (msg, match) => {
-    // Only allow certain users (e.g., admins) to add coupons
-    if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "prosteg" && msg.chat.username !== "Aurelicos") return;
-
-    if (!match) {
-        return bot.sendMessage(msg.chat.id, "Invalid coupon details. Please try again.");
-    }
-
-
-    const couponCode = match[1];
-    const validityDate = new Date(match[2]);
-    const discountAmount = parseInt(match[3]);
-    const usageLimit = parseInt(match[4]);
-
-    await addCouponToDatabase(couponCode, validityDate, discountAmount, usageLimit);
-
-    bot.sendMessage(msg.chat.id, `Coupon with code ${couponCode} added successfully!`);
-});
-
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte podpora@showtip.cz nebo nás kontaktujte na Instagramu @showtip.cz`);
@@ -287,75 +251,51 @@ bot.on('callback_query', async (query) => {
                 userStates[message!.chat.id].type = selectedType;
             }
             const userState = userStates[message!.chat.id];
-            // if (userState.type === "Revolutio") {
-            //     return bot.sendMessage(message!.chat.id, "Toto členství momentálně nelze zakoupit!");
-            // }
-            const payment = memberships.find(membership => membership.type === userState.type);
+            if (!userState || typeof userState.type === 'undefined') {
+                bot.sendMessage(message!.chat.id, "Please select a membership type first.");
+                return;
+            }
+            const payment = memberships.find(m => m.type === userState.type);
             if (!payment) return;
-
-            if (payment === memberships[0] || payment === memberships[2]) {
-                const collections = admin.firestore().collection("payments");
-                const snapshot = await collections.get();
-                let users = 0;
-                snapshot.forEach(async () => {
-                    users++;
-                });
-                if (users > 20) {
-                    return bot.sendMessage(message!.chat.id, "Již nelze kupovat tikety, pro více informací mě kontaktujte: číslo +420604274317 nebo Štěpán Pavelec na Telegramu");
-                }
-
-            }
-
-            let discountAmount = 1;
-            if (userStates[message!.chat.id].coupon) {
-                const couponRef = admin.firestore().collection('discount_coupons').doc(userStates[message!.chat.id].coupon);
-                const couponData = await couponRef.get();
-
-                console.log(couponData);
-
-                // Fetch the current date and compare with coupon's validity
-                const now = new Date();
-                const couponValidity = couponData.data()!.validity.toDate();
-
-                if (couponValidity >= now && couponData.data()!.used_count < couponData.data()!.usage_limit) {
-                    // Update the used_count of the coupon
-                    couponRef.update({ used_count: admin.firestore.FieldValue.increment(1) });
-
-                    discountAmount = (100 - couponData.data()!.discount_amount) / 100; // Convert to the smallest currency unit, e.g., cents
-
-                    // Clear the coupon from userStates after usage
-                    delete userStates[message!.chat.id].coupon;
-                } else {
-                    // Handle invalid coupon scenario, if necessary.
-                }
-            }
 
             const chatId = message!.chat.id;
             const price_id = payment.id;
-            const amount = (payment.price * 100) * discountAmount;
+            let sessionParams: any = {
+                payment_method_types: ['card'],
+                metadata: {
+                    telegramChatId: chatId,
+                    label: payment.type,
+                    userName: `${message!.chat.first_name} ${message!.chat.last_name}`,
+                    userId: chatId,
+                },
+                line_items: [{
+                    price: `${price_id}`,
+                    quantity: 1,
+                }],
+                mode: `${payment.mode}`,
+                success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
+            };
+
+            if (userState.coupon && userState.type === 'All In One') {
+                try {
+                    const stripeCoupon = await stripe.coupons.retrieve(userState.coupon);
+                    if (stripeCoupon && stripeCoupon.valid) {
+                        sessionParams.discounts = [{ coupon: stripeCoupon.id }];
+                    } else {
+                        throw new Error('Invalid coupon');
+                    }
+                } catch (error) {
+                    console.error("Error applying coupon:", error);
+                    return bot.sendMessage(chatId, "There was an issue applying the coupon. Please check the coupon code and try again.");
+                }
+            }
 
             try {
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ['card'],
-                    metadata: {
-                        telegramChatId: chatId,
-                        label: payment.type,
-                        userName: `${message!.chat.first_name} ${message!.chat.last_name}`,
-                        userId: chatId,
-                        amount: amount,
-                    },
-                    line_items: [{
-                        price: `${price_id}`,
-                        quantity: 1,
-                    }],
-                    mode: `${payment.mode}`,
-                    success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
-                });
-                const paymentUrl = session.url;
-                bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${paymentUrl})\nPři zaplacení souhlasíte s našimi [podmínkami](https://www.showtip.cz/obchodni-podminky).`, { parse_mode: "Markdown" });
-            } catch (e) {
-                console.log(e)
-                bot.sendMessage(chatId, "Nastal error při generování platebního linku, zkuste to prosím znovu");
+                const session = await stripe.checkout.sessions.create(sessionParams);
+                bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${session.url})\nPři zaplacení souhlasíte s našimi [podmínkami](https://www.showtip.cz/obchodni-podminky).`, { parse_mode: "Markdown" });
+            } catch (error) {
+                console.error("Error creating Stripe session:", error);
+                bot.sendMessage(chatId, "There was an error creating the payment session. Please try again.");
             }
 
             return;
@@ -383,40 +323,23 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const couponCode = (match ?? [])[1];
 
-    // Fetch the coupon from the database
-    const couponRef = admin.firestore().collection('discount_coupons').doc(couponCode);
-    const couponData = await couponRef.get();
+    try {
+        const stripeCoupon = await stripe.coupons.retrieve(couponCode);
 
-    if (!couponData.exists) {
-        return bot.sendMessage(chatId, "Invalid coupon code.");
+        if (!stripeCoupon || stripeCoupon.valid === false) {
+            return bot.sendMessage(chatId, "This coupon code is not valid.");
+        }
+
+        if (!userStates[chatId]) {
+            userStates[chatId] = {};
+        }
+        userStates[chatId].coupon = couponCode;
+
+        return bot.sendMessage(chatId, "Coupon applied successfully! Your next payment will reflect the discount.");
+    } catch (error) {
+        console.error("Error fetching coupon from Stripe:", error);
+        return bot.sendMessage(chatId, "Failed to apply the coupon. Please try again.");
     }
-
-    const now = new Date();
-    const couponValidity = couponData.data()!.validity.toDate();
-
-    if (couponValidity < now) {
-        return bot.sendMessage(chatId, "The coupon has expired.");
-    }
-
-    if (couponData.data()!.used_count >= couponData.data()!.usage_limit) {
-        return bot.sendMessage(chatId, "The coupon has reached its usage limit.");
-    }
-
-    if (!userStates[msg.chat.id]) {
-        userStates[msg.chat.id] = {};
-    }
-    userStates[msg.chat.id].coupon = couponCode;
-
-
-    // Store the valid coupon code against the user in userStates or another appropriate data structure
-    if (!userStates[msg.chat.id]) {
-        userStates[msg.chat.id] = {};
-    }
-    userStates[msg.chat.id].coupon = couponCode;
-
-    console.log(userStates);
-
-    return bot.sendMessage(chatId, "Coupon applied successfully! Your next payment will reflect the discount.");
 });
 
 bot.on('pre_checkout_query', (query) => {
