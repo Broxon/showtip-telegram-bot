@@ -61,7 +61,7 @@ async function addCouponToDatabase(couponCode: string, validityDate: Date, disco
 
 bot.onText(/\/addcoupon (\S+) (\d{4}-\d{2}-\d{2}) (\d+) (\d+)/, async (msg, match) => {
     // Only allow certain users (e.g., admins) to add coupons
-    if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "prosteg") return;
+    if (msg.chat.username !== "Broxoncz" && msg.chat.username !== "prosteg" && msg.chat.username !== "Aurelicos") return;
 
     if (!match) {
         return bot.sendMessage(msg.chat.id, "Invalid coupon details. Please try again.");
@@ -80,7 +80,7 @@ bot.onText(/\/addcoupon (\S+) (\d{4}-\d{2}-\d{2}) (\d+) (\d+)/, async (msg, matc
 
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte podpora@showtip.cz nebo nás kontaktujte na Instagramu @showtip.cz`);
+    bot.sendMessage(chatId, `Tady máte seznam příkazů:\n\n${commands.map(cmd => `/${cmd.command} - ${cmd.description}`).join('\n')}\n\n\nV případě problémů kontaktujte na tel. číslo +420604274317 nebo Štěpán Pavelec na Telegramu`);
 });
 
 bot.onText(/\/clenstvi( .+)?/, async (msg, match) => {
@@ -307,10 +307,11 @@ bot.on('callback_query', async (query) => {
             }
 
             let discountAmount = 1;
-            let couponId = undefined;
             if (userStates[message!.chat.id].coupon) {
                 const couponRef = admin.firestore().collection('discount_coupons').doc(userStates[message!.chat.id].coupon);
                 const couponData = await couponRef.get();
+
+                console.log(couponData);
 
                 // Fetch the current date and compare with coupon's validity
                 const now = new Date();
@@ -324,19 +325,13 @@ bot.on('callback_query', async (query) => {
 
                     // Clear the coupon from userStates after usage
                     delete userStates[message!.chat.id].coupon;
-
-                    // Set the couponId to be used in the Stripe Checkout Session
-                    couponId = userStates[message!.chat.id].coupon;
                 } else {
-                    console.log("Coupon is invalid");
+                    // Handle invalid coupon scenario, if necessary.
                 }
             }
 
             const chatId = message!.chat.id;
-            const title = payment.type;
-            const description = payment.description;
             const price_id = payment.id;
-            const currency = "CZK";
             const amount = (payment.price * 100) * discountAmount;
 
             try {
@@ -353,7 +348,6 @@ bot.on('callback_query', async (query) => {
                         price: `${price_id}`,
                         quantity: 1,
                     }],
-                    discounts: couponId ? [{ coupon: couponId }] : undefined, // apply coupon if it exists
                     mode: `${payment.mode}`,
                     success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
                 });
