@@ -292,6 +292,10 @@ bot.on('callback_query', async (query) => {
 
             try {
                 const session = await stripe.checkout.sessions.create(sessionParams);
+                await admin.firestore().collection('payments').doc(chatId.toString()).set({
+                    stripeSubscriptionId: session.id,
+                    status: 'active'
+                });
                 bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${session.url})\nPři zaplacení souhlasíte s našimi [podmínkami](https://www.showtip.cz/obchodni-podminky).`, { parse_mode: "Markdown" });
             } catch (error) {
                 console.error("Error creating Stripe session:", error);
@@ -316,6 +320,35 @@ bot.on('callback_query', async (query) => {
     } catch (e) {
         console.log(e);
         bot.sendMessage(message!.chat.id, "Něco se pokazilo, zkuste to prosím znovu");
+    }
+});
+
+bot.onText(/\/unsubscribe/, async (msg) => {
+    const chatId = msg.chat.id;
+
+    try {
+        const doc = await admin.firestore().collection('payments').doc(chatId.toString()).get();
+
+        if (!doc.exists || !doc.data()?.stripeSubscriptionId) {
+            bot.sendMessage(chatId, "Nemáte aktivní předplatné 'All in One'.");
+            return;
+        }
+
+        const subscriptionId = doc.data()?.stripeSubscriptionId;
+
+        if (subscriptionId) {
+            await stripe.subscriptions.del(subscriptionId);
+
+            await admin.firestore().collection('payments').doc(chatId.toString()).update({
+                stripeSubscriptionId: null,
+                status: 'cancelled'
+            });
+
+            bot.sendMessage(chatId, "Vaše předplatné 'All in One' bylo úspěšně zrušeno.");
+        }
+    } catch (error) {
+        console.error("Chyba během odhlášení:", error);
+        bot.sendMessage(chatId, "Při pokusu o odhlášení došlo k chybě. Zkuste to prosím později.");
     }
 });
 
