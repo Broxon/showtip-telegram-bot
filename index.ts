@@ -252,7 +252,7 @@ bot.on('callback_query', async (query) => {
             }
             const userState = userStates[message!.chat.id];
             if (!userState || typeof userState.type === 'undefined') {
-                bot.sendMessage(message!.chat.id, "Please select a membership type first.");
+                bot.sendMessage(message!.chat.id, "Nejprve vyberte členství");
                 return;
             }
             const payment = memberships.find(m => m.type === userState.type);
@@ -286,7 +286,7 @@ bot.on('callback_query', async (query) => {
                     }
                 } catch (error) {
                     console.error("Error applying coupon:", error);
-                    return bot.sendMessage(chatId, "There was an issue applying the coupon. Please check the coupon code and try again.");
+                    return bot.sendMessage(chatId, "Nastala chyba při aplikaci kupónu, zkontrolujte kód kupónu.");
                 }
             }
 
@@ -295,7 +295,7 @@ bot.on('callback_query', async (query) => {
                 bot.sendMessage(chatId, `Prosím zaplaťte přes tento link: [Platba](${session.url})\nPři zaplacení souhlasíte s našimi [podmínkami](https://www.showtip.cz/obchodni-podminky).`, { parse_mode: "Markdown" });
             } catch (error) {
                 console.error("Error creating Stripe session:", error);
-                bot.sendMessage(chatId, "There was an error creating the payment session. Please try again.");
+                bot.sendMessage(chatId, "Nastala chyba při vytváření platebního linku, zkuse to prosím znovu.");
             }
 
             return;
@@ -327,7 +327,7 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
         const stripeCoupon = await stripe.coupons.retrieve(couponCode);
 
         if (!stripeCoupon || stripeCoupon.valid === false) {
-            return bot.sendMessage(chatId, "This coupon code is not valid.");
+            return bot.sendMessage(chatId, "Tento kupón není validní.");
         }
 
         if (!userStates[chatId]) {
@@ -335,10 +335,10 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
         }
         userStates[chatId].coupon = couponCode;
 
-        return bot.sendMessage(chatId, "Coupon applied successfully! Your next payment will reflect the discount.");
+        return bot.sendMessage(chatId, "Kupón byl aplikován, Vaše další platba bude mít uplatněnou slevu.");
     } catch (error) {
         console.error("Error fetching coupon from Stripe:", error);
-        return bot.sendMessage(chatId, "Failed to apply the coupon. Please try again.");
+        return bot.sendMessage(chatId, "Nastala chyba při aplikaci kupónu, zkuse to prosím později.");
     }
 });
 
