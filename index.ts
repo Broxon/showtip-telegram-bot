@@ -164,16 +164,10 @@ bot.onText(/\/stav/, async (msg) => {
             return;
         }
 
-        const tickets = user.data()!.numberOfTickets;
-        if (tickets && user.data()!.expiryDate) {
-            const expiryDate = user.data()!.expiryDate.toDate();
-            const now = new Date();
-            return bot.sendMessage(chatId, `Máte zakoupené toto členství: ${user.data()!.paymentId}, ${expiryDate < now ? "Vaše členství již vypršelo!" : `které vyprší ${expiryDate.toLocaleDateString()}`}\nMáte zakoupený tento počet tiketů: ${tickets}`);
-        } else if (tickets) {
-            return bot.sendMessage(chatId, `Máte zakoupený tento počet tiketů: ${tickets}`);
-        } else if (user.data()!.expiryDate) {
-            const expiryDate = user.data()!.expiryDate.toDate();
-            const now = new Date();
+        const expiryDate = user.data()!.expiryDate ? user.data()!.expiryDate.toDate() : null;
+        const now = new Date();
+
+        if (expiryDate) {
             return bot.sendMessage(chatId, `Máte zakoupené toto členství: ${user.data()!.paymentId}, ${expiryDate < now ? "Vaše členství již vypršelo!" : `které vyprší ${expiryDate.toLocaleDateString()}`}`);
         }
 
@@ -377,6 +371,6 @@ bot.onText(/\/apply_coupon (.+)/, async (msg, match) => {
 
 bot.on('pre_checkout_query', (query) => {
     bot.answerPreCheckoutQuery(query.id, true)
-})
+});
 
 console.log('Bot is running...')

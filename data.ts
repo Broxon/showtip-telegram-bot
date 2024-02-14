@@ -8,7 +8,8 @@ export const commands: Command[] = [
     { command: "help", description: "Vypíše příkazy" },
     { command: "clenstvi", description: "Vypíše druhy členství" },
     { command: "stav", description: "Vypíše stav členství" },
-    { command: "apply_coupon", description: "Použije kupón" }
+    { command: "apply_coupon", description: "Použije kupón" },
+    { command: "unsubscribe", description: "Zrušit členství" }
 ];
 
 export const memberships = [
