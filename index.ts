@@ -323,18 +323,18 @@ bot.onText(/\/unsubscribe/, async (msg) => {
     try {
         const doc = await admin.firestore().collection('payments').doc(chatId.toString()).get();
 
-        if (!doc.exists || !doc.data()?.stripeSubscriptionId) {
+        if (!doc.exists || !doc.data()?.subscribeId) {
             bot.sendMessage(chatId, "Nemáte aktivní předplatné 'All in One'.");
             return;
         }
 
-        const subscriptionId = doc.data()?.stripeSubscriptionId;
+        const subscriptionId = doc.data()?.subscribeId;
 
         if (subscriptionId) {
-            await stripe.subscriptions.del(subscriptionId);
+            await stripe.subscriptions.cancel(subscriptionId);
 
             await admin.firestore().collection('payments').doc(chatId.toString()).update({
-                stripeSubscriptionId: null,
+                subscribeId: null,
                 status: 'cancelled'
             });
 
