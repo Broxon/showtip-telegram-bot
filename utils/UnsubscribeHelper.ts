@@ -45,7 +45,6 @@ export class UnsubscribeHelper {
 
     private async updatePaymentDocument(chatId: { toString: () => any; }) {
         await this.admin.firestore().collection('payments').doc(chatId.toString()).update({
-            subscribeId: null,
             status: 'cancelled'
         });
     }
