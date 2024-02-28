@@ -16,7 +16,7 @@ const bot = new TelegramBot(process.env.TELEGRAM_TOKEN || '', { polling: true })
 const stripe = new Stripe(process.env.STRIPE_TOKEN || "");
 
 const membershipHandler = new handler.MembershipHandler(bot, admin);
-const stateHandler = new handler.StateHandler(bot, admin);
+const stateHandler = new handler.StateHandler(bot, admin, stripe);
 const keyGenHandler = new handler.KeyGenHandler(bot, admin);
 const callbackQueryHandler = new handler.CallbackQueryHandler(bot, admin, stripe);
 const unsubscribeHelper = new handler.UnsubscribeHelper(bot, admin, stripe);
