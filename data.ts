@@ -13,8 +13,8 @@ export const commands: Command[] = [
 ];
 
 export const memberships = [
-    { type: "Základní členství", price: 3000, description: "Základní balíček pro jeden tiket", id: "price_1OLqXsIKOPne52YOC2tr3F0j", mode: "payment" },
-    { type: "All In One", price: 2000, description: "Členství na měsíc", id: "price_1OVfeEIKOPne52YOgHiAzq1f", mode: "subscription" },
+    { type: "Základní členství", price: 3000, description: "Základní balíček pro jeden tiket", id: "price_1OmKc4IKOPne52YOmJ2Zcr0W", mode: "payment" },
+    { type: "All In One", price: 2000, description: "Členství na měsíc", id: "price_1OmHeXIKOPne52YO4l7sYjzD", mode: "subscription" },
     { type: "Revolutio", price: 27000, description: "Nejlepší členství, garance vrácení peněz", id: "price_1OLqXLIKOPne52YOLu50Yh7J", mode: "payment" }
 ];
 
@@ -38,3 +38,6 @@ export const paymentNames = [
         type: "back_to_membership"
     }
 ]
+
+export const dfMessage = `<b>Vítejte!</b>&#10;&#10;Jsem váš osobní asistent pro členství v klubu. &#10;&#10;Pojďte s námi <b>vydělat</b> a získejte finanční <b>svobodu!!</b>🤑 &#10;&#10;<b>******************************</b>&#10;&#10;<a href="showtip.cz"><b>Showtip.cz</b></a>&#10;&#10;<b>******************************</b> &#10;&#10;`
+export const msg2 = 'Vyberte si jeden z následujících <b> balíčků </b>. Existují 3 úrovně, proto vyberte ten, který Vám nejvíce vyhovuje';
