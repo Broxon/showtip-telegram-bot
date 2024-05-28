@@ -20,7 +20,7 @@ export const memberships = [
 
 export const names = [
     "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
-    "All IN ONE 🏆, 1500 CZK/MĚSÍC",
+    "All IN ONE 🏆, 14 dní zadarmo -> 1500 CZK/MĚSÍC",
     "REVOLUTIO 👑, 27000 CZK/10 TIKETŮ"
 ];
 
