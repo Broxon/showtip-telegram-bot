@@ -14,14 +14,12 @@ export const commands: Command[] = [
 
 export const memberships = [
     { type: "Základní členství", price: 3000, description: "Základní balíček pro jeden tiket", id: "price_1OLqXsIKOPne52YOC2tr3F0j", mode: "payment" },
-    { type: "All In One", price: 0, description: "Členství na měsíc", id: "price_1OLqUdIKOPne52YOJVyQpP4c", mode: "subscription" },
-    { type: "Revolutio", price: 27000, description: "Nejlepší členství, garance vrácení peněz", id: "price_1OLqXLIKOPne52YOLu50Yh7J", mode: "payment" }
+    { type: "All In One", price: 0, description: "Členství na měsíc", id: "price_1OLqUdIKOPne52YOJVyQpP4c", mode: "subscription" }
 ];
 
 export const names = [
     "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
-    "All IN ONE 🏆, 14 dní zadarmo",
-    "REVOLUTIO 👑, 27000 CZK/10 TIKETŮ"
+    "All IN ONE 🏆, 1500 CZK/MĚSÍC",
 ];
 
 export const paymentNames = [

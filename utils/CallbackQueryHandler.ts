@@ -87,11 +87,11 @@ export class CallbackQueryHandler {
             success_url: `https://europe-west1-key-petal-397812.cloudfunctions.net/payment?session_id={CHECKOUT_SESSION_ID}`,
         };
 
-        if (payment.mode === 'subscription') {
+        /* if (payment.mode === 'subscription') {
             sessionParams.subscription_data = {
                 trial_period_days: 14,
             };
-        }
+        } */
 
         if (userState.coupon && userState.type === 'All In One') {
             try {
