@@ -89,7 +89,7 @@ export class CallbackQueryHandler {
 
         if (payment.mode === 'subscription') {
             sessionParams.subscription_data = {
-                trial_period_days: 2,
+                trial_period_days: 3,
             };
         }
 
