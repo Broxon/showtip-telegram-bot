@@ -19,7 +19,7 @@ export const memberships = [
 
 export const names = [
     "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
-    "All IN ONE 🏆, 0 CZK/3 DNY",
+    "All IN ONE 🏆, 0 CZK/2 DNY",
 ];
 
 export const paymentNames = [
