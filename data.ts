@@ -24,7 +24,7 @@ export const names = [
 
 export const paymentNames = [
     {
-        name: "💳 Kreditní/Debitní karta",
+        name: "💳 Kreditní/Debetní karta",
         type: "credit_card"
     },
     {
