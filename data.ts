@@ -37,5 +37,5 @@ export const paymentNames = [
     }
 ]
 
-export const dfMessage = `<b>Vítejte!</b>&#10;&#10;Jsem váš osobní asistent při výběru členství. &#10;&#10;Pojďte s námi <b>přivydělat</b> a získejte finanční <b>svobodu!!</b>🤑 &#10;&#10;<b>******************************</b>&#10;&#10;<a href="showtip.cz"><b>Showtip.cz</b></a>&#10;&#10;<b>******************************</b> &#10;&#10;`
-export const msg2 = 'Vyberte si prosím <b> svůj </b>. plán předplatného:';
+export const dfMessage = `<b>Vítej!</b>&#10;&#10;Jsem tvůj osobní asistent při výběru členství. &#10;&#10;Pojď si s námi <b>přivydělat</b> <b>sázením!!</b>🤑 &#10;&#10;<b>******************************</b>&#10;&#10;<a href="showtip.cz"><b>Showtip.cz</b></a>&#10;&#10;<b>******************************</b> &#10;&#10;`
+export const msg2 = 'Vyber si prosím<b> svůj </b> plán předplatného:';
