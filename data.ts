@@ -18,7 +18,7 @@ export const memberships = [
 ];
 
 export const names = [
-    "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
+    
     "ALL IN ONE + INFOTIPY , 1500 CZK/ MĚSÍC",
 ];
 
