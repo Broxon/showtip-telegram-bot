@@ -18,7 +18,6 @@ export const memberships = [
 ];
 
 export const names = [
-    
     "ALL IN ONE + INFOTIPY , 1500 CZK/ MĚSÍC",
 ];
 
