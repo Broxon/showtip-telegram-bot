@@ -14,7 +14,7 @@ export const commands: Command[] = [
 
 export const memberships = [
     { type: "All In One", price: 0, description: "Členství na měsíc", id: "price_1OLqUdIKOPne52YOJVyQpP4c", mode: "subscription" },
-    { type: "All In One", price: 0, description: "Členství na 14 dní", id: "price_1PyeyBIKOPne52YOBJlOTHS9", mode: "subscription" }
+    { type: "All In One", price: 0, description: "Členství na 14 dní", id: "price_1PyfG7IKOPne52YOPuDxjX5E", mode: "subscription" }
 ];
 
 export const names = [
