@@ -64,7 +64,14 @@ export class MembershipHandler {
                 timestamp: new Date(),
             };
 
-            if (i === 2) {
+            let currentExpiry = user.exists && user.data().expiryDate ? new Date(user.data().expiryDate.toDate()) : new Date();
+            currentExpiry < new Date() ? currentExpiry = new Date() : null;
+            currentExpiry.setMonth(currentExpiry.getMonth() + 1);
+
+            updateData['paymentId'] = "All In One";
+            updateData['expiryDate'] = currentExpiry;
+
+            /* if (i === 2) {
                 let currentExpiry = user.exists && user.data().expiryDate ? new Date(user.data().expiryDate.toDate()) : new Date();
                 currentExpiry < new Date() ? currentExpiry = new Date() : null;
                 currentExpiry.setMonth(currentExpiry.getMonth() + 1);
@@ -75,7 +82,7 @@ export class MembershipHandler {
                 let numberOfTickets = i === 1 ? 1 : 10;
                 numberOfTickets += user.exists && user.data().numberOfTickets ? Number(user.data().numberOfTickets) : 0;
                 updateData['numberOfTickets'] = numberOfTickets;
-            }
+            } */
 
             await this.admin.firestore().collection('payments').doc(chatId.toString()).set(updateData, { merge: true });
             return updateData;
@@ -94,7 +101,7 @@ export class MembershipHandler {
                 } else {
                     this.bot.sendMessage(chatId, `Máte zaplacené: ${memberships[i - 1].type}.`);
                 }
-                let groupChatId = memberships[i - 1].type === 'All In One' ? '-1001929255559' : '-1001829724709';
+                let groupChatId = memberships[i - 1].type === 'All In One' || memberships[i - 1].type === 'All In One - 14 dní' ? '-1001929255559' : '-1001829724709';
                 const inviteLink = await this.bot.exportChatInviteLink(groupChatId);
                 this.bot.sendMessage(chatId, `Děkujeme za platbu! Přidejte se k nám zde: ${inviteLink}, tento link vyprší za 10 minut`);
 
