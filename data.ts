@@ -13,13 +13,13 @@ export const commands: Command[] = [
 ];
 
 export const memberships = [
-    { type: "Základní členství", price: 3000, description: "Základní balíček pro jeden tiket", id: "price_1OLqXsIKOPne52YOC2tr3F0j", mode: "payment" },
-    { type: "All In One", price: 0, description: "Členství na měsíc", id: "price_1OLqUdIKOPne52YOJVyQpP4c", mode: "subscription" }
+    { type: "All In One", price: 0, description: "Členství na měsíc", id: "price_1OLqUdIKOPne52YOJVyQpP4c", mode: "subscription" },
+    { type: "All In One", price: 0, description: "Členství na 14 dní", id: "price_1PyeyBIKOPne52YOBJlOTHS9", mode: "subscription" }
 ];
 
 export const names = [
-    "JEDNOTNÝ TIKET 🔥, 3000 CZK/TIKET",
     "ALL IN ONE + INFOTIPY 🍀, 1500 CZK/ MĚSÍC",
+    "ALL IN ONE 🍀, 800 CZK/ 14-DNÍ",
 ];
 
 export const paymentNames = [
